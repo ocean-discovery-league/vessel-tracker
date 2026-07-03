@@ -402,9 +402,23 @@
 </div>
 
 <div id="map"></div>
-<div id="bathy-btn" onclick="toggleBathy()"
+
+<!-- Home / reset view button -->
+<div onclick="map.setView([10,-150],2)"
   class="map-overlay-btn"
   style="position:absolute;top:44px;right:10px;z-index:1000;width:34px;height:34px;
+         background:#0E2446;border:2px solid #187D8B;border-radius:6px;cursor:pointer;
+         display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.5);">
+  <span class="map-btn-tip">Reset View</span>
+  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#81e1e7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+    <polyline points="9 22 9 12 15 12 15 22"/>
+  </svg>
+</div>
+
+<div id="bathy-btn" onclick="toggleBathy()"
+  class="map-overlay-btn"
+  style="position:absolute;top:80px;right:10px;z-index:1000;width:34px;height:34px;
          background:#0E2446;border:2px solid #187D8B;border-radius:6px;cursor:pointer;
          display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.5);">
   <span class="map-btn-tip">Bathymetry</span>
@@ -416,10 +430,10 @@
     <line x1="12" y1="2" x2="12" y2="22"/>
   </svg>
 </div>
-<div id="bathy-dark-ctrl" style="display:none;position:absolute;top:44px;right:48px;z-index:1000;background:#0E2446;border:1px solid #187D8B;border-radius:6px;padding:5px 10px;box-shadow:0 2px 6px rgba(0,0,0,0.5);align-items:center;gap:8px;"><svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="#81e1e7" stroke="#81e1e7" stroke-width="1.5"><circle cx="12" cy="12" r="4"/><line x1="12" y1="2" x2="12" y2="5"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="2" y1="12" x2="5" y2="12"/><line x1="19" y1="12" x2="22" y2="12"/></svg><input id="bathy-brightness" type="range" min="25" max="100" value="60" oninput="applyBathyFilter()" style="width:80px;accent-color:#41B9C3;cursor:pointer;vertical-align:middle;"></div>
+<div id="bathy-dark-ctrl" style="display:none;position:absolute;top:80px;right:48px;z-index:1000;background:#0E2446;border:1px solid #187D8B;border-radius:6px;padding:5px 10px;box-shadow:0 2px 6px rgba(0,0,0,0.5);align-items:center;gap:8px;"><svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="#81e1e7" stroke="#81e1e7" stroke-width="1.5"><circle cx="12" cy="12" r="4"/><line x1="12" y1="2" x2="12" y2="5"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="2" y1="12" x2="5" y2="12"/><line x1="19" y1="12" x2="22" y2="12"/></svg><input id="bathy-brightness" type="range" min="25" max="100" value="60" oninput="applyBathyFilter()" style="width:80px;accent-color:#41B9C3;cursor:pointer;vertical-align:middle;"></div>
 <div id="eez-btn" onclick="toggleEEZ()"
   class="map-overlay-btn"
-  style="position:absolute;top:80px;right:10px;z-index:1000;width:34px;height:34px;
+  style="position:absolute;top:116px;right:10px;z-index:1000;width:34px;height:34px;
          background:#0E2446;border:2px solid #187D8B;border-radius:6px;cursor:pointer;
          display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.5);">
   <span class="map-btn-tip">EEZs</span>
@@ -431,7 +445,7 @@
 </div>
 <div id="measure-btn" onclick="toggleMeasure()"
   class="map-overlay-btn"
-  style="position:absolute;top:116px;right:10px;z-index:1000;width:34px;height:34px;
+  style="position:absolute;top:152px;right:10px;z-index:1000;width:34px;height:34px;
          background:#0E2446;border:2px solid #187D8B;border-radius:6px;cursor:pointer;
          display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.5);">
   <span class="map-btn-tip">Measure</span>
@@ -447,7 +461,7 @@
 </div>
 <div id="weather-btn" onclick="toggleWeatherPanel()"
   class="map-overlay-btn"
-  style="position:absolute;top:152px;right:10px;z-index:1000;width:34px;height:34px;
+  style="position:absolute;top:188px;right:10px;z-index:1000;width:34px;height:34px;
          background:#0E2446;border:2px solid #187D8B;border-radius:6px;cursor:pointer;
          display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.5);">
   <span class="map-btn-tip">Weather</span>
@@ -457,7 +471,7 @@
     <path d="M9 19v2M12 19v3M15 19v2"/>
   </svg>
 </div>
-<div id="weather-ctrl" style="display:none;position:absolute;top:152px;right:48px;z-index:1000;
+<div id="weather-ctrl" style="display:none;position:absolute;top:188px;right:48px;z-index:1000;
      background:#0E2446;border:1px solid #187D8B;border-radius:6px;padding:10px 12px;
      box-shadow:0 2px 10px rgba(0,0,0,0.6);font-family:'Montserrat',sans-serif;min-width:220px;">
   <div style="font-size:9px;font-weight:700;color:#81e1e7;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;">Weather Overlay</div>
@@ -783,6 +797,8 @@ function buildZonePopupContent(z) {
   return `<div style="min-width:220px;font-family:'Montserrat',sans-serif">
     <div style="font-size:13px;font-weight:700;margin-bottom:8px;color:#003">${z.name}</div>
     <table style="font-size:11px;border-collapse:collapse;width:100%">
+      <tr><td style="color:#666;padding:3px 8px 3px 0">Latitude</td><td><b>${z.lat.toFixed(5)}°</b></td></tr>
+      <tr><td style="color:#666;padding:3px 8px 3px 0">Longitude</td><td><b>${z.lon.toFixed(5)}°</b></td></tr>
       <tr><td style="color:#666;padding:3px 8px 3px 0">Depth Zone</td><td><b>${z.depth}</b></td></tr>
       <tr><td style="color:#666;padding:3px 8px 3px 0">Geomorphology</td><td><b>${z.geomorph}</b></td></tr>
       <tr><td style="color:#666;padding:3px 8px 3px 0">Ocean Basin</td><td><b>${z.ocean}</b></td></tr>
@@ -906,9 +922,8 @@ async function fetchNautilusData() {
     // and use maxAllowableOffset to simplify the geometry before sending to browser
     if (a.cruise) {
       const cruise = encodeURIComponent(a.cruise);
-      const t48h = Date.now() - 172800000;
       const trackUrl = `https://services9.arcgis.com/ci0kSsvh5NZiSvac/arcgis/rest/services/RT_Vehicle_Positions_and_Tracks_view/FeatureServer/2/query`
-        + `?where=vehicle%3D'Nautilus'+AND+cruise%3D'${cruise}'+AND+timestamp%3E${t48h}`
+        + `?where=vehicle%3D'Nautilus'+AND+cruise%3D'${cruise}'`
         + `&returnGeometry=true&outSR=4326&maxAllowableOffset=0.005&outFields=cruise&f=json`;
       const rt = await fetch(trackUrl);
       if (rt.ok) {
@@ -972,7 +987,7 @@ async function fetchVesselData() {
 
     // Track (last 4 hours at 5-min intervals = 48 points)
     const r2 = await fetch(
-      'https://soi-vessel-tracker-default-rtdb.firebaseio.com/FKt5/users.json?orderBy=%22%24key%22&limitToLast=576'
+      'https://soi-vessel-tracker-default-rtdb.firebaseio.com/FKt1/users.json?orderBy=%22%24key%22&limitToLast=2880'
     );
     if (r2.ok) {
       const d2 = await r2.json();
@@ -984,8 +999,9 @@ async function fetchVesselData() {
 
       if (trackLine) trackLine.remove();
       trackLine = L.featureGroup(splitAtAntimeridian(pts).map(s => L.polyline(s, { color: '#ff9800', weight: 2, opacity: 0.5, dashArray: '5 5' }))).addTo(map);
+      const hours = Math.round(pts.length / 60 * 10) / 10;
       document.getElementById('track-info').textContent =
-        `Track: ${pts.length} pts · ~${Math.round(pts.length*5/60*10)/10}h of recent history`;
+        `Track: ${pts.length} pts · ~${hours}h of recent history`;
       checkTrackZones(pts, 'R/V Falkor (too)', 'live', null, null, true);
     }
 
@@ -2829,7 +2845,7 @@ function exportTargetsCSV() {
      TARGET_STATUSES[t.status] || t.status, t.diveLat||'', t.diveLon||'', t.notes,
      new Date(t.addedAt).toLocaleString('en-US',{year:'numeric',month:'short',day:'numeric',timeZone:'UTC'})
     ].map(esc).join(','));
-  downloadCSV([headers.join(','), ...rows].join('\n'), 'exploration_targets.csv');
+  downloadCSV([headers.join(','), ...rows], 'exploration_targets.csv');
 }
 
 // Load markers for any saved targets on startup
