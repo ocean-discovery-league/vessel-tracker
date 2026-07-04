@@ -2946,7 +2946,13 @@ function renderMediaThumbnails(mediaFiles, safe) {
   return mediaFiles.map((m, i) => {
     const isVideo = m.type && m.type.startsWith('video/');
     const thumb = isVideo
-      ? `<a href="${m.url}" target="_blank" title="${m.name}" style="display:flex;align-items:center;justify-content:center;width:48px;height:48px;background:#041018;border:1px solid #187D8B;border-radius:3px;color:#41B9C3;font-size:18px;text-decoration:none;position:relative;">▶<button onclick="event.preventDefault();deleteMedia('${safe}',${i})" style="position:absolute;top:-5px;right:-5px;width:14px;height:14px;border-radius:50%;background:#ff5252;border:none;color:#fff;font-size:8px;cursor:pointer;line-height:14px;padding:0;">✕</button></a>`
+      ? `<div style="position:relative;width:100%;margin-bottom:4px;">
+           <video src="${m.url}" controls style="width:100%;max-height:180px;border-radius:4px;border:1px solid #187D8B;background:#000;display:block;" title="${m.name}"></video>
+           <div style="display:flex;align-items:center;justify-content:space-between;margin-top:2px;">
+             <span style="font-size:8px;color:#8899bb;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:180px;">${m.name}</span>
+             <button onclick="deleteMedia('${safe}',${i})" style="background:none;border:none;color:#ff5252;font-size:9px;cursor:pointer;padding:0;flex-shrink:0;">✕ Remove</button>
+           </div>
+         </div>`
       : `<div style="position:relative;width:48px;height:48px;"><img src="${m.url}" style="width:48px;height:48px;object-fit:cover;border-radius:3px;border:1px solid #187D8B;cursor:pointer;" onclick="window.open('${m.url}','_blank')" title="${m.name}"><button onclick="deleteMedia('${safe}',${i})" style="position:absolute;top:-5px;right:-5px;width:14px;height:14px;border-radius:50%;background:#ff5252;border:none;color:#fff;font-size:8px;cursor:pointer;line-height:14px;padding:0;">✕</button></div>`;
     return thumb;
   }).join('');
