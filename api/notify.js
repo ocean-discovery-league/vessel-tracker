@@ -36,7 +36,7 @@ export default async function handler(req, res) {
     method: 'POST',
     headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      from: 'Vessel Monitor <noreply@oceandiscoveryleague.org>',
+      from: 'Vessel Monitor <onboarding@resend.dev>',
       to: [toEmail],
       subject: `🚢 Zone Intersection: ${vessel || 'Vessel'} → ${zone}`,
       html
