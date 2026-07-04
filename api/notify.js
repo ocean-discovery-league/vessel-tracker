@@ -18,8 +18,8 @@ export default async function handler(req, res) {
   const toolUrl = `https://global-goal-tracker-internal.vercel.app/?zone=${encodeURIComponent(zone)}`;
 
   const isGoalZone = title.includes('Observation Dive');
-  const alertColor = isGoalZone ? '#ff1744' : '#e040fb';
-  const alertLabel = isGoalZone ? '🔴 POSSIBLE OBSERVATION DIVE' : '🟣 ZONE INTERSECTION';
+  const alertColor = isGoalZone ? '#c0392b' : '#4a6fa5';
+  const alertLabel = isGoalZone ? '🚢 POSSIBLE OBSERVATION DIVE' : '🚢 ZONE INTERSECTION';
 
   const detailRows = [
     ['Vessel', vessel || '—'],
@@ -69,7 +69,7 @@ export default async function handler(req, res) {
     body: JSON.stringify({
       from: 'Vessel Monitor <onboarding@resend.dev>',
       to: [toEmail],
-      subject: `${isGoalZone ? '🔴' : '🟣'} Global Exploration Goal Zone Intersection: ${vessel || 'Vessel'} → ${zone}`,
+      subject: `🚢 Global Exploration Goal Zone Intersection: ${vessel || 'Vessel'} → ${zone}`,
       html
     })
   });
