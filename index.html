@@ -126,7 +126,9 @@
   </div>
 
   <div style="padding:8px 10px;background:#041828;border-bottom:1px solid #187D8B;">
-    <button id="notif-btn" onclick="toggleNotifications()" class="btn" style="margin-top:0;width:100%;"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="13" viewBox="0 0 24 24" fill="currentColor" style="vertical-align:-2px;margin-right:5px;flex-shrink:0;"><path d="M12 22a2 2 0 0 0 2-2h-4a2 2 0 0 0 2 2zm6-6V11a6 6 0 0 0-5-5.91V4a1 1 0 0 0-2 0v1.09A6 6 0 0 0 6 11v5l-2 2v1h16v-1l-2-2z"/></svg>Enable Zone Notifications — All Vessels</button>
+    <button onclick="navTo('sec-eez')" class="btn" style="margin-top:0;width:100%;background:#041818;border-color:#a5d6a7;color:#a5d6a7;"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:5px;flex-shrink:0;"><rect x="2" y="2" width="20" height="20" rx="2"/><path d="M2 9h20M2 15h20M9 2v20M15 2v20"/></svg>EEZ Zone Filter</button>
+    <button onclick="navTo('sec-legend')" class="btn" style="margin-top:6px;width:100%;background:#041018;border-color:#81e1e7;color:#81e1e7;"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:5px;flex-shrink:0;"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>Map Key</button>
+    <button id="notif-btn" onclick="toggleNotifications()" class="btn" style="margin-top:6px;width:100%;"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="13" viewBox="0 0 24 24" fill="currentColor" style="vertical-align:-2px;margin-right:5px;flex-shrink:0;"><path d="M12 22a2 2 0 0 0 2-2h-4a2 2 0 0 0 2 2zm6-6V11a6 6 0 0 0-5-5.91V4a1 1 0 0 0-2 0v1.09A6 6 0 0 0 6 11v5l-2 2v1h16v-1l-2-2z"/></svg>Enable Zone Notifications — All Vessels</button>
     <div id="notif-status" style="font-size:9px;color:#8899bb;margin-top:4px;line-height:1.4;">Click to get browser notifications when any vessel track intersects a zone.</div>
   </div>
 
@@ -393,7 +395,38 @@
     </div>
   </div>
 
-  <div class="legend">
+  <!-- EEZ Filter Section -->
+  <div class="vessel-section" id="sec-eez" style="border-left-color:#a5d6a7;">
+    <div class="vessel-section-hdr">
+      <div class="vs-pip" style="background:#a5d6a7;"></div>
+      <span class="vs-name" style="color:#a5d6a7;">EEZ Zone Filter</span>
+    </div>
+    <div class="vessel-section-body">
+      <div style="font-size:10px;color:#8899bb;margin-bottom:8px;line-height:1.5;">Click an EEZ to highlight only those zones on the map. <b style="color:#a5d6a7;" id="eez-selected-label"></b></div>
+      <input id="eez-search" type="text" placeholder="Search EEZs…" oninput="renderEEZList()"
+        style="width:100%;box-sizing:border-box;background:#041018;border:1px solid #187D8B;border-radius:4px;color:#e0e6f0;font-size:10px;font-family:'Montserrat',sans-serif;padding:5px 8px;margin-bottom:6px;">
+      <div style="display:flex;gap:4px;margin-bottom:6px;">
+        <button id="eez-sort-count" onclick="setEEZSort('count')"
+          style="flex:1;font-size:9px;font-family:'Montserrat',sans-serif;padding:4px;border-radius:3px;cursor:pointer;font-weight:700;letter-spacing:0.3px;background:#003322;border:1px solid #a5d6a7;color:#a5d6a7;">
+          # Zones</button>
+        <button id="eez-sort-alpha" onclick="setEEZSort('alpha')"
+          style="flex:1;font-size:9px;font-family:'Montserrat',sans-serif;padding:4px;border-radius:3px;cursor:pointer;font-weight:700;letter-spacing:0.3px;background:#041018;border:1px solid #187D8B;color:#41B9C3;">
+          A–Z</button>
+        <button onclick="clearEEZFilter()"
+          style="flex:1;font-size:9px;font-family:'Montserrat',sans-serif;padding:4px;border-radius:3px;cursor:pointer;font-weight:700;letter-spacing:0.3px;background:#0a1929;border:1px solid #187D8B;color:#41B9C3;">
+          Show All</button>
+      </div>
+      <div id="eez-download-row" style="display:none;margin-bottom:6px;">
+        <button onclick="exportEEZCSV()" style="width:100%;font-size:10px;font-family:'Montserrat',sans-serif;padding:5px 8px;border-radius:4px;cursor:pointer;font-weight:700;letter-spacing:0.3px;background:#0a1929;border:1px solid #a5d6a7;color:#a5d6a7;display:flex;align-items:center;justify-content:center;gap:5px;">
+          <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 12 13" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 1v8M2.5 6.5 6 10l3.5-3.5M1 12h10"/></svg>
+          Download EEZ Zones CSV
+        </button>
+      </div>
+      <div id="eez-list" style="max-height:320px;overflow-y:auto;font-size:10px;"></div>
+    </div>
+  </div>
+
+  <div class="legend" id="sec-legend">
     <div class="legend-title">Map Key</div>
     <div id="legend-items"></div>
   </div>
@@ -406,7 +439,7 @@
 <!-- Home / reset view button -->
 <div onclick="map.setView([10,-150],2)"
   class="map-overlay-btn"
-  style="position:absolute;top:44px;right:10px;z-index:1000;width:34px;height:34px;
+  style="position:fixed;top:44px;right:10px;z-index:1000;width:34px;height:34px;
          background:#0E2446;border:2px solid #187D8B;border-radius:6px;cursor:pointer;
          display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.5);">
   <span class="map-btn-tip">Reset View</span>
@@ -418,7 +451,7 @@
 
 <div id="bathy-btn" onclick="toggleBathy()"
   class="map-overlay-btn"
-  style="position:absolute;top:80px;right:10px;z-index:1000;width:34px;height:34px;
+  style="position:fixed;top:80px;right:10px;z-index:1000;width:34px;height:34px;
          background:#0E2446;border:2px solid #187D8B;border-radius:6px;cursor:pointer;
          display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.5);">
   <span class="map-btn-tip">Bathymetry</span>
@@ -430,10 +463,10 @@
     <line x1="12" y1="2" x2="12" y2="22"/>
   </svg>
 </div>
-<div id="bathy-dark-ctrl" style="display:none;position:absolute;top:80px;right:48px;z-index:1000;background:#0E2446;border:1px solid #187D8B;border-radius:6px;padding:5px 10px;box-shadow:0 2px 6px rgba(0,0,0,0.5);align-items:center;gap:8px;"><svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="#81e1e7" stroke="#81e1e7" stroke-width="1.5"><circle cx="12" cy="12" r="4"/><line x1="12" y1="2" x2="12" y2="5"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="2" y1="12" x2="5" y2="12"/><line x1="19" y1="12" x2="22" y2="12"/></svg><input id="bathy-brightness" type="range" min="25" max="100" value="60" oninput="applyBathyFilter()" style="width:80px;accent-color:#41B9C3;cursor:pointer;vertical-align:middle;"></div>
+<div id="bathy-dark-ctrl" style="display:none;position:fixed;top:80px;right:48px;z-index:1000;background:#0E2446;border:1px solid #187D8B;border-radius:6px;padding:5px 10px;box-shadow:0 2px 6px rgba(0,0,0,0.5);align-items:center;gap:8px;"><svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="#81e1e7" stroke="#81e1e7" stroke-width="1.5"><circle cx="12" cy="12" r="4"/><line x1="12" y1="2" x2="12" y2="5"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="2" y1="12" x2="5" y2="12"/><line x1="19" y1="12" x2="22" y2="12"/></svg><input id="bathy-brightness" type="range" min="25" max="100" value="60" oninput="applyBathyFilter()" style="width:80px;accent-color:#41B9C3;cursor:pointer;vertical-align:middle;"></div>
 <div id="eez-btn" onclick="toggleEEZ()"
   class="map-overlay-btn"
-  style="position:absolute;top:116px;right:10px;z-index:1000;width:34px;height:34px;
+  style="position:fixed;top:116px;right:10px;z-index:1000;width:34px;height:34px;
          background:#0E2446;border:2px solid #187D8B;border-radius:6px;cursor:pointer;
          display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.5);">
   <span class="map-btn-tip">EEZs</span>
@@ -445,7 +478,7 @@
 </div>
 <div id="gebco-btn" onclick="toggleGEBCO()"
   class="map-overlay-btn"
-  style="position:absolute;top:152px;right:10px;z-index:1000;width:34px;height:34px;
+  style="position:fixed;top:152px;right:10px;z-index:1000;width:34px;height:34px;
          background:#0E2446;border:2px solid #187D8B;border-radius:6px;cursor:pointer;
          display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.5);">
   <span class="map-btn-tip">GEBCO Seabed 2030</span>
@@ -456,10 +489,10 @@
     <path d="M2 17 Q6 11 12 17 Q18 23 22 17"/>
   </svg>
 </div>
-<div id="gebco-opacity-ctrl" style="display:none;position:absolute;top:152px;right:48px;z-index:1000;background:#0E2446;border:1px solid #187D8B;border-radius:6px;padding:5px 10px;box-shadow:0 2px 6px rgba(0,0,0,0.5);align-items:center;gap:8px;"><svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#81e1e7" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M2 12 Q6 6 12 12 Q18 18 22 12"/></svg><input id="gebco-opacity" type="range" min="10" max="100" value="25" oninput="applyGEBCOOpacity()" style="width:80px;accent-color:#41B9C3;cursor:pointer;vertical-align:middle;"></div>
+<div id="gebco-opacity-ctrl" style="display:none;position:fixed;top:152px;right:48px;z-index:1000;background:#0E2446;border:1px solid #187D8B;border-radius:6px;padding:5px 10px;box-shadow:0 2px 6px rgba(0,0,0,0.5);align-items:center;gap:8px;"><svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#81e1e7" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M2 12 Q6 6 12 12 Q18 18 22 12"/></svg><input id="gebco-opacity" type="range" min="10" max="100" value="25" oninput="applyGEBCOOpacity()" style="width:80px;accent-color:#41B9C3;cursor:pointer;vertical-align:middle;"></div>
 <div id="measure-btn" onclick="toggleMeasure()"
   class="map-overlay-btn"
-  style="position:absolute;top:188px;right:10px;z-index:1000;width:34px;height:34px;
+  style="position:fixed;top:188px;right:10px;z-index:1000;width:34px;height:34px;
          background:#0E2446;border:2px solid #187D8B;border-radius:6px;cursor:pointer;
          display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.5);">
   <span class="map-btn-tip">Measure</span>
@@ -475,7 +508,7 @@
 </div>
 <div id="historic-dives-btn" onclick="toggleHistoricDives()"
   class="map-overlay-btn"
-  style="position:absolute;top:224px;right:10px;z-index:1000;width:34px;height:34px;
+  style="position:fixed;top:224px;right:10px;z-index:1000;width:34px;height:34px;
          background:#0E2446;border:2px solid #187D8B;border-radius:6px;cursor:pointer;
          display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.5);">
   <span class="map-btn-tip">Historic Dives</span>
@@ -488,7 +521,7 @@
 
 <div id="weather-btn" onclick="toggleWeatherPanel()"
   class="map-overlay-btn"
-  style="position:absolute;top:260px;right:10px;z-index:1000;width:34px;height:34px;
+  style="position:fixed;top:260px;right:10px;z-index:1000;width:34px;height:34px;
          background:#0E2446;border:2px solid #187D8B;border-radius:6px;cursor:pointer;
          display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.5);">
   <span class="map-btn-tip">Weather</span>
@@ -498,7 +531,7 @@
     <path d="M9 19v2M12 19v3M15 19v2"/>
   </svg>
 </div>
-<div id="weather-ctrl" style="display:none;position:absolute;top:260px;right:48px;z-index:1000;
+<div id="weather-ctrl" style="display:none;position:fixed;top:260px;right:48px;z-index:1000;
      background:#0E2446;border:1px solid #187D8B;border-radius:6px;padding:10px 12px;
      box-shadow:0 2px 10px rgba(0,0,0,0.6);font-family:'Montserrat',sans-serif;min-width:220px;">
   <div style="font-size:9px;font-weight:700;color:#81e1e7;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;">Weather Overlay</div>
@@ -3069,6 +3102,104 @@ async function toggleHistoricDives() {
   document.getElementById('legend-historic-dives-group').style.display = '';
   document.querySelectorAll('[data-historic-dive-legend]').forEach(el => el.style.display = '');
 }
+
+// ── EEZ Filter ────────────────────────────────────────────────────────────────
+let activeEEZ = null;
+let eezSort = 'count';
+
+function buildEEZIndex() {
+  const map = new Map();
+  for (const z of zoneData) {
+    if (!map.has(z.eez)) map.set(z.eez, []);
+    map.get(z.eez).push(z);
+  }
+  return map;
+}
+let eezIndex = null;
+
+function setEEZSort(mode) {
+  eezSort = mode;
+  document.getElementById('eez-sort-count').style.background = mode === 'count' ? '#003322' : '#041018';
+  document.getElementById('eez-sort-count').style.borderColor = mode === 'count' ? '#a5d6a7' : '#187D8B';
+  document.getElementById('eez-sort-count').style.color = mode === 'count' ? '#a5d6a7' : '#41B9C3';
+  document.getElementById('eez-sort-alpha').style.background = mode === 'alpha' ? '#003322' : '#041018';
+  document.getElementById('eez-sort-alpha').style.borderColor = mode === 'alpha' ? '#a5d6a7' : '#187D8B';
+  document.getElementById('eez-sort-alpha').style.color = mode === 'alpha' ? '#a5d6a7' : '#41B9C3';
+  renderEEZList();
+}
+
+function renderEEZList() {
+  if (!eezIndex) eezIndex = buildEEZIndex();
+  let entries = [...eezIndex.entries()];
+  if (eezSort === 'count') entries.sort((a, b) => b[1].length - a[1].length);
+  else entries.sort((a, b) => a[0].localeCompare(b[0]));
+  const q = (document.getElementById('eez-search')?.value || '').toLowerCase();
+  const container = document.getElementById('eez-list');
+  if (!container) return;
+  let html = '';
+  for (const [name, zones] of entries) {
+    if (q && !name.toLowerCase().includes(q)) continue;
+    const active = activeEEZ === name;
+    html += `<div onclick="selectEEZ('${name.replace(/'/g, "\\'")}')"
+      style="display:flex;justify-content:space-between;align-items:center;
+             padding:5px 8px;border-radius:4px;cursor:pointer;margin-bottom:2px;
+             background:${active ? '#003322' : '#041018'};
+             border:1px solid ${active ? '#a5d6a7' : '#0d2535'};
+             color:${active ? '#a5d6a7' : '#8899bb'};">
+      <span style="flex:1;margin-right:8px;line-height:1.3;">${name}</span>
+      <span style="font-weight:700;color:${active ? '#a5d6a7' : '#41B9C3'};flex-shrink:0;">${zones.length}</span>
+    </div>`;
+  }
+  container.innerHTML = html;
+}
+
+function selectEEZ(name) {
+  activeEEZ = activeEEZ === name ? null : name;
+  if (!activeEEZ) { clearEEZFilter(); return; }
+  const selected = new Set((eezIndex.get(name) || []).map(z => z.name));
+  for (const z of zoneData) {
+    if (selected.has(z.name)) {
+      zss(z, { opacity: 0.9, fillOpacity: 0.35, weight: z.circle.options.weight });
+    } else {
+      zss(z, { opacity: 0.08, fillOpacity: 0.03 });
+    }
+  }
+  const lbl = document.getElementById('eez-selected-label');
+  if (lbl) lbl.textContent = `${name} — ${selected.size} zones`;
+  const dl = document.getElementById('eez-download-row');
+  if (dl) dl.style.display = '';
+  renderEEZList();
+}
+
+function clearEEZFilter() {
+  activeEEZ = null;
+  for (const z of zoneData) {
+    const flagged = ZONE_LAND.has(z.name) || ZONE_SHALLOW.has(z.name) || ZONE_OVERLAPS.has(z.name);
+    zss(z, { opacity: 0.9, fillOpacity: flagged ? 0.3 : 0.15 });
+  }
+  const lbl = document.getElementById('eez-selected-label');
+  if (lbl) lbl.textContent = '';
+  const dl = document.getElementById('eez-download-row');
+  if (dl) dl.style.display = 'none';
+  renderEEZList();
+}
+
+function exportEEZCSV() {
+  if (!activeEEZ) return;
+  const zones = eezIndex.get(activeEEZ) || [];
+  const rows = ['Zone Name,EEZ,Ocean,Latitude,Longitude,Flag'];
+  for (const z of zones) {
+    const flag = ZONE_LAND.has(z.name) ? 'Land' : ZONE_SHALLOW.has(z.name) ? 'Shallow' : ZONE_OVERLAPS.has(z.name) ? 'Overlapping' : '';
+    const lat = typeof z.lat !== 'undefined' ? z.lat : '';
+    const lon = typeof z.lon !== 'undefined' ? z.lon : '';
+    rows.push([z.name, activeEEZ, z.ocean || '', lat, lon, flag].map(v => `"${String(v).replace(/"/g,'""')}"`).join(','));
+  }
+  const safe = activeEEZ.replace(/[^a-z0-9]/gi, '_');
+  downloadCSV(rows, `eez_zones_${safe}_${new Date().toISOString().slice(0,10)}.csv`);
+}
+
+// Build list once zoneData is ready (called after zones are drawn)
+setTimeout(() => renderEEZList(), 500);
 
 // ── Ocean Basin Color Toggle ──────────────────────────────────────────────────
 let oceanColorsOn = true;
