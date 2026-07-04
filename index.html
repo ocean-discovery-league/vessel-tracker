@@ -443,9 +443,22 @@
     <path d="M2 9h20M2 15h20M9 2v20M15 2v20"/>
   </svg>
 </div>
-<div id="measure-btn" onclick="toggleMeasure()"
+<div id="gebco-btn" onclick="toggleGEBCO()"
   class="map-overlay-btn"
   style="position:absolute;top:152px;right:10px;z-index:1000;width:34px;height:34px;
+         background:#0E2446;border:2px solid #187D8B;border-radius:6px;cursor:pointer;
+         display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.5);">
+  <span class="map-btn-tip">GEBCO Seabed 2030</span>
+  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
+       stroke="#81e1e7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M2 12 Q6 6 12 12 Q18 18 22 12"/>
+    <path d="M2 7 Q6 1 12 7 Q18 13 22 7"/>
+    <path d="M2 17 Q6 11 12 17 Q18 23 22 17"/>
+  </svg>
+</div>
+<div id="measure-btn" onclick="toggleMeasure()"
+  class="map-overlay-btn"
+  style="position:absolute;top:188px;right:10px;z-index:1000;width:34px;height:34px;
          background:#0E2446;border:2px solid #187D8B;border-radius:6px;cursor:pointer;
          display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.5);">
   <span class="map-btn-tip">Measure</span>
@@ -461,7 +474,7 @@
 </div>
 <div id="historic-dives-btn" onclick="toggleHistoricDives()"
   class="map-overlay-btn"
-  style="position:absolute;top:188px;right:10px;z-index:1000;width:34px;height:34px;
+  style="position:absolute;top:224px;right:10px;z-index:1000;width:34px;height:34px;
          background:#0E2446;border:2px solid #187D8B;border-radius:6px;cursor:pointer;
          display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.5);">
   <span class="map-btn-tip">Historic Dives</span>
@@ -474,7 +487,7 @@
 
 <div id="weather-btn" onclick="toggleWeatherPanel()"
   class="map-overlay-btn"
-  style="position:absolute;top:224px;right:10px;z-index:1000;width:34px;height:34px;
+  style="position:absolute;top:260px;right:10px;z-index:1000;width:34px;height:34px;
          background:#0E2446;border:2px solid #187D8B;border-radius:6px;cursor:pointer;
          display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.5);">
   <span class="map-btn-tip">Weather</span>
@@ -484,7 +497,7 @@
     <path d="M9 19v2M12 19v3M15 19v2"/>
   </svg>
 </div>
-<div id="weather-ctrl" style="display:none;position:absolute;top:224px;right:48px;z-index:1000;
+<div id="weather-ctrl" style="display:none;position:absolute;top:260px;right:48px;z-index:1000;
      background:#0E2446;border:1px solid #187D8B;border-radius:6px;padding:10px 12px;
      box-shadow:0 2px 10px rgba(0,0,0,0.6);font-family:'Montserrat',sans-serif;min-width:220px;">
   <div style="font-size:9px;font-weight:700;color:#81e1e7;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;">Weather Overlay</div>
@@ -622,6 +635,28 @@ for (const [name, color, shape] of [
   legendEl.appendChild(el);
 }
 
+// Historic Dives (hidden until layer activated)
+const hdGroup = document.createElement('div');
+hdGroup.className = 'legend-group';
+hdGroup.id = 'legend-historic-dives-group';
+hdGroup.textContent = 'Historic Dives (Bell et al.)';
+hdGroup.style.display = 'none';
+legendEl.appendChild(hdGroup);
+for (const [name, color] of [
+  ['ROV', '#29b6f6'],
+  ['HOV', '#66bb6a'],
+  ['AUV', '#ce93d8'],
+  ['Lander', '#ffa726'],
+  ['Camera Tow', '#fff176'],
+]) {
+  const el = document.createElement('div');
+  el.className = 'legend-item';
+  el.dataset.historicDiveLegend = '1';
+  el.style.display = 'none';
+  el.innerHTML = `<span style="font-size:11px;color:${color};line-height:1;">●</span><span>${name}</span>`;
+  legendEl.appendChild(el);
+}
+
 // Ocean basins
 const oGroup = document.createElement('div'); oGroup.className='legend-group'; oGroup.textContent='Zone Ocean Basins'; legendEl.appendChild(oGroup);
 for (const [name, color] of Object.entries(OCEAN_COLORS)) {
@@ -658,6 +693,15 @@ const eezLayer = L.tileLayer.wms('https://geo.vliz.be/geoserver/MarineRegions/wm
   attribution: 'EEZ boundaries &copy; <a href="https://www.marineregions.org" target="_blank">Marine Regions</a>'
 });
 let eezActive = false;
+
+const gebcoLayer = L.tileLayer.wms('https://www.gebco.net/data_and_products/gebco_web_services/web_map_service/mapserv', {
+  layers: 'GEBCO_LATEST',
+  format: 'image/png',
+  transparent: false,
+  opacity: 0.75,
+  attribution: 'Bathymetry &copy; <a href="https://www.gebco.net" target="_blank">GEBCO / Seabed 2030</a>'
+});
+let gebcoActive = false;
 darkLayer.addTo(map);
 
 // Draw all 10,000 zones using shared canvas renderer
@@ -2911,6 +2955,8 @@ async function toggleHistoricDives() {
     btn.style.background  = '#0E2446';
     btn.style.borderColor = '#187D8B';
     btn.querySelector('svg').setAttribute('stroke', '#81e1e7');
+    document.getElementById('legend-historic-dives-group').style.display = 'none';
+    document.querySelectorAll('[data-historic-dive-legend]').forEach(el => el.style.display = 'none');
     return;
   }
   btn.style.background  = '#004D64';
@@ -2962,6 +3008,26 @@ async function toggleHistoricDives() {
 
   historicDivesLayer = L.featureGroup(markers).addTo(map);
   historicDivesActive = true;
+  document.getElementById('legend-historic-dives-group').style.display = '';
+  document.querySelectorAll('[data-historic-dive-legend]').forEach(el => el.style.display = '');
+}
+
+// ── GEBCO Seabed 2030 Layer ───────────────────────────────────────────────────
+function toggleGEBCO() {
+  const btn = document.getElementById('gebco-btn');
+  if (gebcoActive) {
+    gebcoLayer.remove();
+    gebcoActive = false;
+    btn.style.background  = '#0E2446';
+    btn.style.borderColor = '#187D8B';
+    btn.querySelector('svg').setAttribute('stroke', '#81e1e7');
+  } else {
+    gebcoLayer.addTo(map);
+    gebcoActive = true;
+    btn.style.background  = '#004D64';
+    btn.style.borderColor = '#41B9C3';
+    btn.querySelector('svg').setAttribute('stroke', '#41B9C3');
+  }
 }
 
 // ── Bathymetry Basemap Toggle ─────────────────────────────────────────────────
