@@ -456,7 +456,7 @@
     <path d="M2 17 Q6 11 12 17 Q18 23 22 17"/>
   </svg>
 </div>
-<div id="gebco-opacity-ctrl" style="display:none;position:absolute;top:152px;right:48px;z-index:1000;background:#0E2446;border:1px solid #187D8B;border-radius:6px;padding:5px 10px;box-shadow:0 2px 6px rgba(0,0,0,0.5);align-items:center;gap:8px;"><svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#81e1e7" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M2 12 Q6 6 12 12 Q18 18 22 12"/></svg><input id="gebco-opacity" type="range" min="10" max="100" value="70" oninput="applyGEBCOOpacity()" style="width:80px;accent-color:#41B9C3;cursor:pointer;vertical-align:middle;"></div>
+<div id="gebco-opacity-ctrl" style="display:none;position:absolute;top:152px;right:48px;z-index:1000;background:#0E2446;border:1px solid #187D8B;border-radius:6px;padding:5px 10px;box-shadow:0 2px 6px rgba(0,0,0,0.5);align-items:center;gap:8px;"><svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#81e1e7" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M2 12 Q6 6 12 12 Q18 18 22 12"/></svg><input id="gebco-opacity" type="range" min="10" max="100" value="25" oninput="applyGEBCOOpacity()" style="width:80px;accent-color:#41B9C3;cursor:pointer;vertical-align:middle;"></div>
 <div id="measure-btn" onclick="toggleMeasure()"
   class="map-overlay-btn"
   style="position:absolute;top:188px;right:10px;z-index:1000;width:34px;height:34px;
@@ -628,6 +628,7 @@ const iGroup = document.createElement('div'); iGroup.className='legend-group'; i
 for (const [name, color, shape] of [
   ['Possible Observation Dive (based on dwell time or operation status)', '#ff1744', '●'],
   ['Targeted for Exploration', '#FFB300', '★'],
+  ['Actual Reported Dive Location', '#00e5ff', '●'],
   ['Zone Intersection (all vessels)', '#e040fb', '●'],
   ['Near Miss — within 1.5 km (all vessels)', '#ffd54f', '◎'],
 ]) {
@@ -658,6 +659,21 @@ for (const [name, color] of [
   legendEl.appendChild(el);
 }
 
+// Exploration Goal statuses
+const sGroup = document.createElement('div'); sGroup.className='legend-group'; sGroup.textContent='Exploration Goal Status'; legendEl.appendChild(sGroup);
+for (const [key, label] of [
+  ['targeted',          'Targeted'],
+  ['needinvestigation', 'Need Investigation'],
+  ['underconsideration','Under Consideration'],
+  ['complete',          'Reported Complete'],
+  ['verified',          'Verified'],
+]) {
+  const col = { targeted:'#FFB300', needinvestigation:'#ff7043', underconsideration:'#ab47bc', complete:'#4caf50', verified:'#00e5ff' }[key];
+  const el = document.createElement('div'); el.className='legend-item';
+  el.innerHTML = `<span style="font-size:16px;color:${col};line-height:1;">★</span><span>${label}</span>`;
+  legendEl.appendChild(el);
+}
+
 // Geometric flags
 const gGroup = document.createElement('div'); gGroup.className='legend-group'; gGroup.textContent='Zone Flags'; legendEl.appendChild(gGroup);
 for (const [name, color, label] of [
@@ -671,12 +687,20 @@ for (const [name, color, label] of [
 }
 
 // Ocean basins
-const oGroup = document.createElement('div'); oGroup.className='legend-group'; oGroup.textContent='Zone Ocean Basins'; legendEl.appendChild(oGroup);
+const oGroup = document.createElement('div');
+oGroup.className = 'legend-group';
+oGroup.style.cssText = 'display:flex;align-items:center;justify-content:space-between;cursor:pointer;user-select:none;';
+oGroup.innerHTML = `<span>Zone Ocean Basins</span><span id="ocean-color-toggle" style="font-size:9px;font-weight:600;letter-spacing:0.5px;padding:2px 6px;border:1px solid #41B9C3;border-radius:3px;color:#41B9C3;background:#041018;">ON</span>`;
+oGroup.onclick = toggleOceanColors;
+legendEl.appendChild(oGroup);
+const oSwatches = [];
 for (const [name, color] of Object.entries(OCEAN_COLORS)) {
   const el = document.createElement('div');
   el.className = 'legend-item';
+  el.dataset.oceanSwatch = '1';
   el.innerHTML = `<div class="legend-swatch" style="background:${color}"></div><span>${name}</span>`;
   legendEl.appendChild(el);
+  oSwatches.push({ el, color });
 }
 
 // Init map — preferCanvas handles ALL vector layers, no per-circle renderer needed
@@ -827,7 +851,7 @@ function checkZones(lat, lon, vesselName) {
     if (z.histVisits && z.histVisits.length) { zss(z, { weight: 2.5, color: '#e040fb', fillOpacity: 0.55 }); }
     else if (z.trackVisits && z.trackVisits.length) { zss(z, { weight: 2.5, color: '#e040fb', fillOpacity: 0.55 }); }
     else if ((z.histNearMiss) || (z.trackNearMiss && z.trackNearMiss.length)) { zss(z, { weight: 2, color: '#ffd54f', fillOpacity: 0.4 }); }
-    else { zss(z, { weight: 1, color: z.defaultColor, fillOpacity: 0.15 }); }
+    else { zss(z, { weight: 1, color: zoneBaseColor(z), fillColor: zoneBaseColor(z), fillOpacity: 0.15 }); }
   }
 
   const alertBox = document.getElementById('alert-box');
@@ -1149,11 +1173,11 @@ function applyHistoricalRecords(records, startVal, endVal, infoEl) {
   histNearMissMarkers = [];
   for (const z of histHitZones) {
     z.histVisits = null;
-    zss(z, { weight: 1, color: z.defaultColor, fillOpacity: 0.15 });
+    zss(z, { weight: 1, color: zoneBaseColor(z), fillColor: zoneBaseColor(z), fillOpacity: 0.15 });
   }
   histHitZones = [];
   for (const z of histNearMissZones) {
-    if (!z.histVisits) zss(z, { weight: 1, color: z.defaultColor, fillOpacity: 0.15 });
+    if (!z.histVisits) zss(z, { weight: 1, color: zoneBaseColor(z), fillColor: zoneBaseColor(z), fillOpacity: 0.15 });
     z.histNearMiss = null;
   }
   histNearMissZones = [];
@@ -1318,12 +1342,12 @@ function clearHistoricalTrack() {
   histNearMissMarkers = [];
   for (const z of histHitZones) {
     z.histVisits = null;
-    zss(z, { weight: 1, color: z.defaultColor, fillOpacity: 0.15 });
+    zss(z, { weight: 1, color: zoneBaseColor(z), fillColor: zoneBaseColor(z), fillOpacity: 0.15 });
   }
   histHitZones = [];
   for (const z of histNearMissZones) {
     z.histNearMiss = null;
-    zss(z, { weight: 1, color: z.defaultColor, fillOpacity: 0.15 });
+    zss(z, { weight: 1, color: zoneBaseColor(z), fillColor: zoneBaseColor(z), fillOpacity: 0.15 });
   }
   histNearMissZones = [];
   updateZoneHitList();
@@ -2230,7 +2254,7 @@ function clearTrackZones(vesselLabel, trackLabel) {
       trackZoneHits.delete(z);
       const hasNearMiss = z.trackNearMiss && z.trackNearMiss.length;
       if (!z.histVisits && !z.histNearMiss && !hasNearMiss) {
-        zss(z, { weight: 1, color: z.defaultColor, fillOpacity: 0.15 });
+        zss(z, { weight: 1, color: zoneBaseColor(z), fillColor: zoneBaseColor(z), fillOpacity: 0.15 });
       } else if (!z.histVisits && !hasNearMiss) {
         zss(z, { weight: 2, color: '#ffd54f', fillOpacity: 0.4 });
       }
@@ -3046,10 +3070,40 @@ async function toggleHistoricDives() {
   document.querySelectorAll('[data-historic-dive-legend]').forEach(el => el.style.display = '');
 }
 
+// ── Ocean Basin Color Toggle ──────────────────────────────────────────────────
+let oceanColorsOn = true;
+const GREY_ZONE = '#607d8b';
+function zoneBaseColor(z) { return oceanColorsOn ? z.defaultColor : GREY_ZONE; }
+
+function toggleOceanColors() {
+  oceanColorsOn = !oceanColorsOn;
+  const lbl = document.getElementById('ocean-color-toggle');
+  lbl.textContent = oceanColorsOn ? 'ON' : 'OFF';
+  lbl.style.color       = oceanColorsOn ? '#41B9C3' : '#8899bb';
+  lbl.style.borderColor = oceanColorsOn ? '#41B9C3' : '#8899bb';
+  // Show/hide swatches
+  document.querySelectorAll('[data-ocean-swatch]').forEach(el => {
+    el.style.opacity = oceanColorsOn ? '1' : '0.35';
+  });
+  // Recolor all zones — respect existing flags
+  for (const z of zoneData) {
+    if (ZONE_LAND.has(z.name) || ZONE_SHALLOW.has(z.name) || ZONE_OVERLAPS.has(z.name)) continue;
+    const col = oceanColorsOn ? z.defaultColor : GREY_ZONE;
+    zss(z, { color: col, fillColor: col });
+  }
+}
+
 // ── GEBCO Seabed 2030 Layer ───────────────────────────────────────────────────
 function applyGEBCOOpacity() {
-  const v = document.getElementById('gebco-opacity')?.value ?? 70;
-  gebcoLayer.setOpacity(v / 100);
+  const v = (document.getElementById('gebco-opacity')?.value ?? 70) / 100;
+  // Keep full opacity but use CSS filter to colorize black lines → cyan and control brightness
+  gebcoLayer.setOpacity(1);
+  const container = gebcoLayer.getContainer?.();
+  if (container) {
+    // invert(1) turns black→white, hue-rotate+saturate shifts to cyan (#41B9C3 ≈ 180°)
+    container.style.filter = `invert(1) sepia(1) saturate(4) hue-rotate(155deg) brightness(${0.3 + v * 1.2})`;
+    container.style.opacity = Math.max(0.15, v);
+  }
 }
 
 function toggleGEBCO() {
@@ -3064,7 +3118,8 @@ function toggleGEBCO() {
     ctrl.style.display = 'none';
   } else {
     gebcoLayer.addTo(map);
-    applyGEBCOOpacity();
+    // Wait a tick for the container to be created before applying filter
+    setTimeout(applyGEBCOOpacity, 50);
     gebcoActive = true;
     btn.style.background  = '#004D64';
     btn.style.borderColor = '#41B9C3';
