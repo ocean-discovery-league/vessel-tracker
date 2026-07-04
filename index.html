@@ -459,9 +459,22 @@
     <line x1="21" y1="8" x2="21" y2="13"/>
   </svg>
 </div>
-<div id="weather-btn" onclick="toggleWeatherPanel()"
+<div id="historic-dives-btn" onclick="toggleHistoricDives()"
   class="map-overlay-btn"
   style="position:absolute;top:188px;right:10px;z-index:1000;width:34px;height:34px;
+         background:#0E2446;border:2px solid #187D8B;border-radius:6px;cursor:pointer;
+         display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.5);">
+  <span class="map-btn-tip">Historic Dives</span>
+  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
+       stroke="#81e1e7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="12" cy="12" r="10"/>
+    <polyline points="12 6 12 12 16 14"/>
+  </svg>
+</div>
+
+<div id="weather-btn" onclick="toggleWeatherPanel()"
+  class="map-overlay-btn"
+  style="position:absolute;top:224px;right:10px;z-index:1000;width:34px;height:34px;
          background:#0E2446;border:2px solid #187D8B;border-radius:6px;cursor:pointer;
          display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.5);">
   <span class="map-btn-tip">Weather</span>
@@ -471,7 +484,7 @@
     <path d="M9 19v2M12 19v3M15 19v2"/>
   </svg>
 </div>
-<div id="weather-ctrl" style="display:none;position:absolute;top:188px;right:48px;z-index:1000;
+<div id="weather-ctrl" style="display:none;position:absolute;top:224px;right:48px;z-index:1000;
      background:#0E2446;border:1px solid #187D8B;border-radius:6px;padding:10px 12px;
      box-shadow:0 2px 10px rgba(0,0,0,0.6);font-family:'Montserrat',sans-serif;min-width:220px;">
   <div style="font-size:9px;font-weight:700;color:#81e1e7;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;">Weather Overlay</div>
@@ -537,11 +550,13 @@
       if (change.type === 'removed') {
         delete explorationTargets[name];
         removeTargetMarker(name);
+        if (window.diveMarkers && diveMarkers[name]) { diveMarkers[name].remove(); delete diveMarkers[name]; }
       } else {
         const existed = !!explorationTargets[name];
         explorationTargets[name] = data;
         const z = zoneData.find(z => z.name === name);
         if (z) addTargetMarker(z);
+        if (window.updateDiveMarker) updateDiveMarker(name);
         if (!existed && z) {
           // new goal added by another user — no popup
         }
@@ -2744,11 +2759,30 @@ function setTargetNotes(zoneName, notes) {
   if (window._fbSaveGoal) window._fbSaveGoal(zoneName, explorationTargets[zoneName]);
 }
 
+const diveMarkers = {};
+
+function updateDiveMarker(zoneName) {
+  const t = explorationTargets[zoneName];
+  if (diveMarkers[zoneName]) { diveMarkers[zoneName].remove(); delete diveMarkers[zoneName]; }
+  if (!t || !t.diveLat || !t.diveLon) return;
+  const lat = parseFloat(t.diveLat), lon = parseFloat(t.diveLon);
+  if (isNaN(lat) || isNaN(lon)) return;
+  const icon = L.divIcon({
+    className: '',
+    html: `<div style="width:12px;height:12px;border-radius:50%;background:#00e5ff;border:2px solid #fff;box-shadow:0 0 6px #00e5ff;"></div>`,
+    iconSize: [12, 12], iconAnchor: [6, 6]
+  });
+  const m = L.marker([lat, pacificLon(lon)], { icon, zIndexOffset: 8000 }).addTo(map);
+  m.bindTooltip(`<b>Actual Dive</b><br>${zoneName}<br>${lat.toFixed(5)}°, ${lon.toFixed(5)}°`, { direction: 'top', offset: [0, -8] });
+  diveMarkers[zoneName] = m;
+}
+
 function setTargetDiveLocation(zoneName, lat, lon) {
   if (!explorationTargets[zoneName]) return;
   explorationTargets[zoneName].diveLat = lat.trim();
   explorationTargets[zoneName].diveLon = lon.trim();
   if (window._fbSaveGoal) window._fbSaveGoal(zoneName, explorationTargets[zoneName]);
+  updateDiveMarker(zoneName);
 }
 
 function refreshZonePopup(z) {
@@ -2853,11 +2887,82 @@ function initTargetMarkers() {
   for (const name of Object.keys(explorationTargets)) {
     const z = zoneData.find(z => z.name === name);
     if (z) addTargetMarker(z);
+    updateDiveMarker(name);
   }
   renderTargetsList();
 }
 
 
+
+// ── Historic Dives Layer ──────────────────────────────────────────────────────
+const DIVE_TYPE_COLORS = ['#29b6f6','#66bb6a','#ce93d8','#ffa726','#fff176','#90a4ae'];
+const DIVE_TYPE_NAMES  = ['ROV','HOV','AUV','Lander','Camera Tow','Other'];
+
+let historicDivesActive = false;
+let historicDivesLayer  = null;
+let historicDivesData   = null;
+let historicDivesPopup  = L.popup({ maxWidth: 260 });
+
+async function toggleHistoricDives() {
+  const btn = document.getElementById('historic-dives-btn');
+  if (historicDivesActive) {
+    if (historicDivesLayer) { historicDivesLayer.remove(); historicDivesLayer = null; }
+    historicDivesActive = false;
+    btn.style.background  = '#0E2446';
+    btn.style.borderColor = '#187D8B';
+    btn.querySelector('svg').setAttribute('stroke', '#81e1e7');
+    return;
+  }
+  btn.style.background  = '#004D64';
+  btn.style.borderColor = '#41B9C3';
+  btn.querySelector('svg').setAttribute('stroke', '#fff');
+
+  if (!historicDivesData) {
+    btn.querySelector('svg').setAttribute('stroke', '#ffa726');
+    try {
+      const r = await fetch('historic_dives.json');
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      historicDivesData = await r.json();
+    } catch(e) {
+      alert('Could not load historic dives data: ' + e.message);
+      btn.style.background  = '#0E2446';
+      btn.style.borderColor = '#187D8B';
+      btn.querySelector('svg').setAttribute('stroke', '#81e1e7');
+      return;
+    }
+    btn.querySelector('svg').setAttribute('stroke', '#fff');
+  }
+
+  const markers = historicDivesData.dives.map(d => {
+    const [lat, lon, typeIdx, year, institution, platform, depthZone, sovereign] = d;
+    const color = DIVE_TYPE_COLORS[typeIdx] ?? DIVE_TYPE_COLORS[5];
+    const typeName = DIVE_TYPE_NAMES[typeIdx] ?? 'Other';
+    const m = L.circleMarker([lat, pacificLon(lon)], {
+      radius: 3, color, fillColor: color,
+      fillOpacity: 0.7, weight: 0.5, opacity: 0.9
+    });
+    m.on('click', e => {
+      L.DomEvent.stopPropagation(e);
+      historicDivesPopup.setLatLng([lat, pacificLon(lon)]).setContent(`
+        <div style="min-width:200px;font-family:'Montserrat',sans-serif;">
+          <div style="font-weight:700;font-size:12px;margin-bottom:6px;color:#29b6f6;">${typeName} Dive</div>
+          <table style="font-size:11px;border-collapse:collapse;width:100%">
+            <tr><td style="color:#666;padding:2px 8px 2px 0">Year</td><td><b>${year}</b></td></tr>
+            <tr><td style="color:#666;padding:2px 8px 2px 0">Platform</td><td><b>${platform}</b></td></tr>
+            <tr><td style="color:#666;padding:2px 8px 2px 0">Institution</td><td><b>${institution}</b></td></tr>
+            <tr><td style="color:#666;padding:2px 8px 2px 0">Depth Zone</td><td><b>${depthZone}</b></td></tr>
+            <tr><td style="color:#666;padding:2px 8px 2px 0">Jurisdiction</td><td><b>${sovereign}</b></td></tr>
+            <tr><td style="color:#666;padding:2px 8px 2px 0">Lat / Lon</td><td><b>${lat}°, ${lon}°</b></td></tr>
+          </table>
+          <div style="font-size:9px;color:#999;margin-top:6px;">Bell et al. SciAdv DSV dataset v2</div>
+        </div>`).openOn(map);
+    });
+    return m;
+  });
+
+  historicDivesLayer = L.featureGroup(markers).addTo(map);
+  historicDivesActive = true;
+}
 
 // ── Bathymetry Basemap Toggle ─────────────────────────────────────────────────
 function applyBathyFilter() {
