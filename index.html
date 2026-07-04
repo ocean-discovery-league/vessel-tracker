@@ -565,7 +565,8 @@
 <script src="https://cdn.jsdelivr.net/npm/leaflet-velocity@2.1.1/dist/leaflet-velocity.min.js"></script>
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-  import { getFirestore, collection, doc, onSnapshot, setDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+  import { getFirestore, collection, doc, onSnapshot, setDoc, deleteDoc, updateDoc, arrayUnion, arrayRemove } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+  import { getStorage, ref, uploadBytesResumable, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js";
 
   const firebaseConfig = {
     apiKey: "AIzaSyDpprTOUyLc5NhXG3W4BAFqaqC4Tuq9Dn8",
@@ -578,6 +579,7 @@
 
   const fbApp = initializeApp(firebaseConfig);
   const db = getFirestore(fbApp);
+  const storage = getStorage(fbApp);
   const goalsCol = collection(db, 'explorationGoals');
 
   // Expose Firestore helpers to global scope for the rest of the app
@@ -586,6 +588,31 @@
   };
   window._fbDeleteGoal = async (zoneName) => {
     await deleteDoc(doc(goalsCol, zoneName.replace(/\//g, '_')));
+  };
+
+  // Media upload: uploads file to Storage, saves URL to Firestore mediaFiles array
+  window._fbUploadMedia = (zoneName, file, onProgress, onDone, onError) => {
+    const safeName = zoneName.replace(/\//g, '_');
+    const ext = file.name.split('.').pop();
+    const path = `dives/${safeName}/${Date.now()}_${file.name}`;
+    const storageRef = ref(storage, path);
+    const task = uploadBytesResumable(storageRef, file);
+    task.on('state_changed',
+      snap => onProgress(Math.round(snap.bytesTransferred / snap.totalBytes * 100)),
+      onError,
+      async () => {
+        const url = await getDownloadURL(task.snapshot.ref);
+        const entry = { url, name: file.name, type: file.type, path, uploadedAt: Date.now() };
+        await updateDoc(doc(goalsCol, safeName), { mediaFiles: arrayUnion(entry) });
+        onDone(entry);
+      }
+    );
+  };
+
+  // Media delete: removes from Storage and Firestore
+  window._fbDeleteMedia = async (zoneName, entry) => {
+    try { await deleteObject(ref(storage, entry.path)); } catch(e) {}
+    await updateDoc(doc(goalsCol, zoneName.replace(/\//g, '_')), { mediaFiles: arrayRemove(entry) });
   };
 
   // Real-time listener — keeps explorationTargets in sync for all users
@@ -931,6 +958,16 @@ function buildZonePopupContent(z) {
         </div>
         <textarea onblur="setTargetNotes('${safe}', this.value)" placeholder="Notes…"
           style="width:100%;box-sizing:border-box;font-size:9px;font-family:'Montserrat',sans-serif;background:#041018;border:1px solid #187D8B;border-radius:3px;color:#8899bb;padding:4px;resize:vertical;min-height:40px;">${t.notes}</textarea>
+        <div style="margin-top:6px;border-top:1px solid #187D8B;padding-top:6px;">
+          <div style="font-size:9px;color:#8899bb;margin-bottom:4px;">Photos &amp; Videos:</div>
+          <div id="popup-media-${safe}" style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:5px;">${renderMediaThumbnails(t.mediaFiles||[],safe)}</div>
+          <label style="display:flex;align-items:center;justify-content:center;gap:5px;width:100%;box-sizing:border-box;padding:5px;background:#041018;border:1px dashed #187D8B;border-radius:3px;color:#41B9C3;font-size:9px;font-weight:700;cursor:pointer;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            Upload Photo / Video
+            <input type="file" accept="image/*,video/*" style="display:none;" onchange="handleMediaUpload('${safe}', this)">
+          </label>
+          <div id="popup-media-progress-${safe}" style="display:none;margin-top:4px;font-size:9px;color:#41B9C3;"></div>
+        </div>
       </div>`
     : `<button onclick="toggleTarget('${safe}')"
         style="margin-top:10px;width:100%;padding:12px 8px;background:#1a1100;border:2px solid #FFB300;border-radius:6px;color:#FFB300;font-size:12px;font-weight:700;font-family:'Montserrat',sans-serif;cursor:pointer;letter-spacing:0.5px;display:block;">
@@ -1840,7 +1877,8 @@ function checkTrackZones(latlngs, vesselLabel, trackLabel, markerStore, meta, no
       if (notify) zoneNotify(
         isPossibleDive ? '\u2B24 Possible Observation Dive' : '\u25CF Zone Intersection',
         z.name + '\n' + vesselLabel + ' \u00B7 ' + trackLabel + '\n' + z.geomorph + ' \u00B7 ' + z.depth + (isPossibleDive ? '\n\uD83D\uDD2C ' + opType : ''),
-        isPossibleDive ? '#ff1744' : '#e040fb'
+        isPossibleDive ? '#ff1744' : '#e040fb',
+        vesselLabel, z.name
       );
       const dotColor = isPossibleDive ? '#ff1744' : '#e040fb';
       const m = L.circleMarker([eLat, eLon], {
@@ -1870,7 +1908,8 @@ function checkTrackZones(latlngs, vesselLabel, trackLabel, markerStore, meta, no
         if (nmIsDive && notify) zoneNotify(
           '\u2B24 Possible Observation Dive \u2014 Near Miss',
           z.name + '\n' + vesselLabel + ' \u00B7 ' + trackLabel + '\n' + gapM + ' m from boundary',
-          '#ff1744'
+          '#ff1744',
+          vesselLabel, z.name
         );
         const nmColor = nmIsDive ? '#ff1744' : '#ffd54f';
         const m = L.circleMarker([lat, lon], {
@@ -2807,14 +2846,28 @@ async function toggleNotifications() {
   updateNotifUI();
 }
 
-function zoneNotify(title, body, color) {
-  if (!notificationsEnabled || Notification.permission !== 'granted') return;
-  const iconColor = (color || '#e040fb').replace('#', '%23');
-  new Notification(title, {
-    body,
-    icon: `data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><circle cx="16" cy="16" r="16" fill="%230E2446"/><circle cx="16" cy="16" r="8" fill="none" stroke="${iconColor}" stroke-width="2.5"/><circle cx="16" cy="16" r="3" fill="${iconColor}"/></svg>`,
-    tag: title
-  });
+const _emailSent = new Map(); // zone|vessel -> timestamp, 30-min cooldown
+function zoneNotify(title, body, color, vessel, zone) {
+  if (notificationsEnabled && Notification.permission === 'granted') {
+    const iconColor = (color || '#e040fb').replace('#', '%23');
+    new Notification(title, {
+      body,
+      icon: `data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><circle cx="16" cy="16" r="16" fill="%230E2446"/><circle cx="16" cy="16" r="8" fill="none" stroke="${iconColor}" stroke-width="2.5"/><circle cx="16" cy="16" r="3" fill="${iconColor}"/></svg>`,
+      tag: title
+    });
+  }
+  // Email via Vercel API — deduplicate per zone+vessel within 30 minutes
+  if (zone && vessel) {
+    const key = zone + '|' + vessel;
+    const last = _emailSent.get(key) || 0;
+    if (Date.now() - last < 30 * 60 * 1000) return;
+    _emailSent.set(key, Date.now());
+    fetch('/api/notify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title, body, vessel, zone, timestamp: new Date().toISOString() })
+    }).catch(() => {});
+  }
 }
 
 // ── Exploration Targets ───────────────────────────────────────────────────────
@@ -2886,6 +2939,56 @@ function setTargetStatus(zoneName, status) {
   if (window._fbSaveGoal) window._fbSaveGoal(zoneName, explorationTargets[zoneName]);
   renderTargetsList();
   refreshZonePopup(z);
+}
+
+function renderMediaThumbnails(mediaFiles, safe) {
+  if (!mediaFiles || !mediaFiles.length) return '';
+  return mediaFiles.map((m, i) => {
+    const isVideo = m.type && m.type.startsWith('video/');
+    const thumb = isVideo
+      ? `<a href="${m.url}" target="_blank" title="${m.name}" style="display:flex;align-items:center;justify-content:center;width:48px;height:48px;background:#041018;border:1px solid #187D8B;border-radius:3px;color:#41B9C3;font-size:18px;text-decoration:none;position:relative;">▶<button onclick="event.preventDefault();deleteMedia('${safe}',${i})" style="position:absolute;top:-5px;right:-5px;width:14px;height:14px;border-radius:50%;background:#ff5252;border:none;color:#fff;font-size:8px;cursor:pointer;line-height:14px;padding:0;">✕</button></a>`
+      : `<div style="position:relative;width:48px;height:48px;"><img src="${m.url}" style="width:48px;height:48px;object-fit:cover;border-radius:3px;border:1px solid #187D8B;cursor:pointer;" onclick="window.open('${m.url}','_blank')" title="${m.name}"><button onclick="deleteMedia('${safe}',${i})" style="position:absolute;top:-5px;right:-5px;width:14px;height:14px;border-radius:50%;background:#ff5252;border:none;color:#fff;font-size:8px;cursor:pointer;line-height:14px;padding:0;">✕</button></div>`;
+    return thumb;
+  }).join('');
+}
+
+function handleMediaUpload(safe, input) {
+  const file = input.files[0];
+  if (!file) return;
+  if (file.size > 10 * 1024 * 1024) { alert('File must be under 10 MB.'); return; }
+  if (!window._fbUploadMedia) { alert('Storage not ready yet — try again in a moment.'); return; }
+  const prog = document.getElementById('popup-media-progress-' + safe);
+  if (prog) { prog.style.display = ''; prog.textContent = 'Uploading… 0%'; }
+  const zoneName = safe.replace(/\\'/g, "'");
+  window._fbUploadMedia(
+    zoneName, file,
+    pct => { if (prog) prog.textContent = `Uploading… ${pct}%`; },
+    entry => {
+      if (prog) { prog.textContent = 'Uploaded!'; setTimeout(() => { prog.style.display = 'none'; }, 2000); }
+      const t = explorationTargets[zoneName];
+      if (t) {
+        if (!t.mediaFiles) t.mediaFiles = [];
+        t.mediaFiles.push(entry);
+        const grid = document.getElementById('popup-media-' + safe);
+        if (grid) grid.innerHTML = renderMediaThumbnails(t.mediaFiles, safe);
+      }
+      input.value = '';
+    },
+    err => { if (prog) { prog.textContent = 'Upload failed: ' + err.message; } }
+  );
+}
+
+function deleteMedia(safe, idx) {
+  const zoneName = safe.replace(/\\'/g, "'");
+  const t = explorationTargets[zoneName];
+  if (!t || !t.mediaFiles || !t.mediaFiles[idx]) return;
+  if (!confirm('Delete this file?')) return;
+  const entry = t.mediaFiles[idx];
+  window._fbDeleteMedia(zoneName, entry).then(() => {
+    t.mediaFiles.splice(idx, 1);
+    const grid = document.getElementById('popup-media-' + safe);
+    if (grid) grid.innerHTML = renderMediaThumbnails(t.mediaFiles, safe);
+  });
 }
 
 function setTargetNotes(zoneName, notes) {
@@ -3001,6 +3104,7 @@ function renderTargetsList() {
       <textarea onblur="setTargetNotes('${safe}', this.value)"
         placeholder="Notes…"
         style="width:100%;box-sizing:border-box;font-size:9px;font-family:'Montserrat',sans-serif;background:#041018;border:1px solid #187D8B;border-radius:3px;color:#8899bb;padding:4px;resize:vertical;min-height:40px;">${t.notes}</textarea>
+      ${t.mediaFiles && t.mediaFiles.length ? `<div style="margin-top:6px;border-top:1px solid #187D8B;padding-top:5px;"><div style="font-size:9px;color:#8899bb;margin-bottom:4px;">Photos &amp; Videos (${t.mediaFiles.length}):</div><div style="display:flex;flex-wrap:wrap;gap:4px;">${renderMediaThumbnails(t.mediaFiles, safe)}</div></div>` : ''}
     </div>`;
   }).join('');
   renderTargetsPie();
