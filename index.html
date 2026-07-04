@@ -2955,7 +2955,7 @@ function renderMediaThumbnails(mediaFiles, safe) {
 function handleMediaUpload(safe, input) {
   const file = input.files[0];
   if (!file) return;
-  if (file.size > 10 * 1024 * 1024) { alert('File must be under 10 MB.'); return; }
+  if (file.size > 50 * 1024 * 1024) { alert('File must be under 50 MB.'); return; }
   if (!window._fbUploadMedia) { alert('Storage not ready yet — try again in a moment.'); return; }
   const prog = document.getElementById('popup-media-progress-' + safe);
   if (prog) { prog.style.display = ''; prog.textContent = 'Uploading… 0%'; }
