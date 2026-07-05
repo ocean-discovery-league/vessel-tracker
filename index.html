@@ -3317,26 +3317,74 @@ async function renderEEZHistory(eezName) {
        </table>`
     : '';
 
-  // Images section
+  // Images section — cards with star, capture date, notes
   const imgs = _eezImgCache[eezName] || [];
-  const imgsHtml = `
-    <div style="font-size:9px;font-weight:700;color:#41B9C3;letter-spacing:1px;text-transform:uppercase;margin-bottom:5px;">
+  const imgsHtml = renderEEZImageCards(eezName, imgs, safeEEZ);
+
+  panel.innerHTML = zeroFlag + divesHtml + imgsHtml;
+}
+
+function renderEEZImageCards(eezName, imgs, safeEEZ) {
+  const cards = imgs.map((m, i) => {
+    const starred = m.starred ? 1 : 0;
+    const captureDate = m.captureDate || '';
+    const notes = m.notes || '';
+    const starStyle = starred
+      ? 'background:#b8860b;border-color:#ffd700;color:#ffd700;'
+      : 'background:#041018;border-color:#41B9C3;color:#41B9C3;';
+    return `<div style="background:#061420;border:1px solid ${starred ? '#ffd700' : '#187D8B'};border-radius:5px;padding:6px;margin-bottom:6px;">
+      <div style="display:flex;gap:6px;align-items:flex-start;">
+        <div style="position:relative;flex-shrink:0;">
+          <img src="${m.url}" style="width:72px;height:72px;object-fit:cover;border-radius:3px;cursor:pointer;" onclick="window.open('${m.url}','_blank')" title="${(m.name||'').replace(/"/g,'&quot;')}">
+          ${starred ? '<div style="position:absolute;bottom:0;left:0;right:0;background:rgba(0,0,0,0.7);color:#ffd700;font-size:8px;text-align:center;padding:1px 0;border-radius:0 0 3px 3px;">&#9733; FIRST KNOWN</div>' : ''}
+        </div>
+        <div style="flex:1;min-width:0;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+            <span style="font-size:9px;color:#8899bb;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;margin-right:4px;">${m.name||''}</span>
+            <button onclick="starEEZImage('${safeEEZ}',${i})" style="flex-shrink:0;padding:1px 5px;border-radius:3px;border:1px solid;font-size:8px;cursor:pointer;${starStyle}">&#9733;</button>
+            <button onclick="deleteEEZImage('${safeEEZ}',${i})" style="flex-shrink:0;margin-left:3px;width:16px;height:16px;border-radius:50%;background:#ff5252;border:none;color:#fff;font-size:8px;cursor:pointer;line-height:16px;padding:0;">&#10005;</button>
+          </div>
+          <input type="text" placeholder="Capture date (e.g. 1964-08-12)" value="${captureDate.replace(/"/g,'&quot;')}"
+            oninput="saveEEZImageMeta('${safeEEZ}',${i},'captureDate',this.value)"
+            style="width:100%;box-sizing:border-box;background:#041018;border:1px solid #187D8B;border-radius:3px;color:#c8ddf0;font-size:8px;padding:2px 4px;margin-bottom:3px;">
+          <textarea placeholder="Notes (depth, equipment, context…)" rows="2"
+            oninput="saveEEZImageMeta('${safeEEZ}',${i},'notes',this.value)"
+            style="width:100%;box-sizing:border-box;background:#041018;border:1px solid #187D8B;border-radius:3px;color:#c8ddf0;font-size:8px;padding:2px 4px;resize:vertical;">${notes}</textarea>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+
+  return `<div style="font-size:9px;font-weight:700;color:#41B9C3;letter-spacing:1px;text-transform:uppercase;margin-bottom:5px;">
       Earliest Known Seafloor Images
     </div>
-    <div id="eez-img-grid" style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:6px;">
-      ${imgs.map((m,i) => `<div style="position:relative;width:64px;height:64px;">
-        <img src="${m.url}" style="width:64px;height:64px;object-fit:cover;border-radius:3px;border:1px solid #187D8B;cursor:pointer;filter:grayscale(30%);" onclick="window.open('${m.url}','_blank')" title="${m.name}">
-        <button onclick="deleteEEZImage('${safeEEZ.replace(/\/g,'\\')}',${i})" style="position:absolute;top:-5px;right:-5px;width:14px;height:14px;border-radius:50%;background:#ff5252;border:none;color:#fff;font-size:8px;cursor:pointer;line-height:14px;padding:0;">✕</button>
-      </div>`).join('')}
-    </div>
-    <label style="display:flex;align-items:center;justify-content:center;gap:5px;width:100%;box-sizing:border-box;padding:5px;background:#041018;border:1px dashed #187D8B;border-radius:3px;color:#41B9C3;font-size:9px;font-weight:700;cursor:pointer;">
+    <div id="eez-img-grid">${cards}</div>
+    <label style="display:flex;align-items:center;justify-content:center;gap:5px;width:100%;box-sizing:border-box;padding:5px;background:#041018;border:1px dashed #187D8B;border-radius:3px;color:#41B9C3;font-size:9px;font-weight:700;cursor:pointer;margin-top:4px;">
       <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
       Upload Historic Image
       <input type="file" accept="image/*" style="display:none;" onchange="uploadEEZImage('${safeEEZ}', this)">
     </label>
     <div id="eez-img-progress" style="display:none;font-size:9px;color:#41B9C3;margin-top:4px;"></div>`;
+}
 
-  panel.innerHTML = zeroFlag + divesHtml + imgsHtml;
+function starEEZImage(safeEEZ, idx) {
+  const eezName = safeEEZ.replace(/\\'/g, "'");
+  const imgs = _eezImgCache[eezName] || [];
+  imgs.forEach((m, i) => m.starred = (i === idx) ? !m.starred : false);
+  if (window._fbSaveEEZImages) window._fbSaveEEZImages(eezName, imgs);
+  renderEEZHistory(eezName);
+}
+
+const _eezMetaSaveTimers = {};
+function saveEEZImageMeta(safeEEZ, idx, field, value) {
+  const eezName = safeEEZ.replace(/\\'/g, "'");
+  const imgs = _eezImgCache[eezName] || [];
+  if (!imgs[idx]) return;
+  imgs[idx][field] = value;
+  clearTimeout(_eezMetaSaveTimers[eezName]);
+  _eezMetaSaveTimers[eezName] = setTimeout(() => {
+    if (window._fbSaveEEZImages) window._fbSaveEEZImages(eezName, imgs);
+  }, 800);
 }
 
 async function uploadEEZImage(safeEEZ, input) {
