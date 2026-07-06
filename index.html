@@ -410,8 +410,11 @@
     </div>
     <div class="vessel-section-body">
       <div style="font-size:10px;color:#8899bb;margin-bottom:6px;line-height:1.5;">Click an EEZ to highlight only those zones on the map. <b style="color:#a5d6a7;" id="eez-selected-label"></b></div>
-      <div style="font-size:9px;color:#8899bb;margin-bottom:8px;"><span style="color:#ff6d00;">⚠</span> = No historic visual observations recorded</div>
-      <input id="eez-search" type="text" placeholder="Search EEZs…" oninput="renderEEZList()"
+      <div style="font-size:9px;color:#8899bb;margin-bottom:8px;display:flex;align-items:center;gap:6px;">
+        <button id="eez-zero-btn" onclick="toggleEEZZeroFilter()" style="background:#1a0a00;border:1px solid #ff6d00;border-radius:3px;color:#ff6d00;font-size:9px;font-family:'Montserrat',sans-serif;padding:2px 6px;cursor:pointer;font-weight:700;">⚠ <span id="eez-zero-count">…</span></button>
+        <span>= No historic visual observations</span>
+      </div>
+      <input id="eez-search" type="text" placeholder="Search EEZs…" oninput="eezZeroFilter=false;updateEEZZeroBtn();renderEEZList()"
         style="width:100%;box-sizing:border-box;background:#041018;border:1px solid #187D8B;border-radius:4px;color:#e0e6f0;font-size:10px;font-family:'Montserrat',sans-serif;padding:5px 8px;margin-bottom:6px;">
       <div style="display:flex;gap:4px;margin-bottom:6px;">
         <button id="eez-sort-count" onclick="setEEZSort('count')"
@@ -3436,6 +3439,22 @@ function setEEZSort(mode) {
   renderEEZList();
 }
 
+let eezZeroFilter = false;
+
+function toggleEEZZeroFilter() {
+  eezZeroFilter = !eezZeroFilter;
+  document.getElementById('eez-search').value = '';
+  updateEEZZeroBtn();
+  renderEEZList();
+}
+
+function updateEEZZeroBtn() {
+  const btn = document.getElementById('eez-zero-btn');
+  if (!btn) return;
+  btn.style.background = eezZeroFilter ? '#ff6d00' : '#1a0a00';
+  btn.style.color = eezZeroFilter ? '#000' : '#ff6d00';
+}
+
 function renderEEZList() {
   if (!eezIndex) eezIndex = buildEEZIndex();
   let entries = [...eezIndex.entries()];
@@ -3444,17 +3463,30 @@ function renderEEZList() {
   const q = (document.getElementById('eez-search')?.value || '').toLowerCase();
   const container = document.getElementById('eez-list');
   if (!container) return;
+
+  // Count zero-observation EEZs and update button
+  const zeroCount = entries.filter(([name]) => {
+    const d = EEZ_DIVE_DATA[name]; return !d || d.count === 0;
+  }).length;
+  const countEl = document.getElementById('eez-zero-count');
+  if (countEl) countEl.textContent = zeroCount;
+
   let html = '';
   for (const [name, zones] of entries) {
     if (q && !name.toLowerCase().includes(q)) continue;
+    const diveInfo = EEZ_DIVE_DATA[name];
+    const zeroDives = !diveInfo || diveInfo.count === 0;
+    if (eezZeroFilter && !zeroDives) continue;
     const active = activeEEZ === name;
     html += `<div onclick="selectEEZ('${name.replace(/'/g, "\\'")}')"
       style="display:flex;justify-content:space-between;align-items:center;
              padding:5px 8px;border-radius:4px;cursor:pointer;margin-bottom:2px;
              background:${active ? '#003322' : '#041018'};
-             border:1px solid ${active ? '#a5d6a7' : '#0d2535'};
+             border:1px solid ${active ? '#a5d6a7' : zeroDives ? '#3a1800' : '#0d2535'};
              color:${active ? '#a5d6a7' : '#8899bb'};">
-      <span style="flex:1;margin-right:8px;line-height:1.3;">${name}</span>
+      <span style="flex:1;margin-right:8px;line-height:1.3;">
+        ${zeroDives ? '<span style="color:#ff6d00;margin-right:3px;" title="No historic visual observations">⚠</span>' : ''}${name}
+      </span>
       <span style="font-weight:700;color:${active ? '#a5d6a7' : '#41B9C3'};flex-shrink:0;">${zones.length}</span>
     </div>`;
   }
@@ -3474,6 +3506,19 @@ function selectEEZ(name) {
   }
   const lbl = document.getElementById('eez-selected-label');
   if (lbl) lbl.textContent = `${name} — ${selected.size} zones`;
+
+  // Fit map to the selected EEZ zones
+  const eezZones = eezIndex.get(name) || [];
+  if (eezZones.length) {
+    const lats = eezZones.map(z => z.lat);
+    const lons = eezZones.map(z => z.lon);
+    const bounds = L.latLngBounds(
+      [Math.min(...lats) - 0.5, Math.min(...lons) - 0.5],
+      [Math.max(...lats) + 0.5, Math.max(...lons) + 0.5]
+    );
+    map.fitBounds(bounds, { padding: [40, 40], maxZoom: 8 });
+  }
+
   const dl = document.getElementById('eez-download-row');
   if (dl) dl.style.display = '';
   renderEEZList();
