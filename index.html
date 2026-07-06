@@ -3975,7 +3975,7 @@ function verifyPoints(points) {
     // Map marker
     const isHit  = ptHit;
     const isNear = !ptHit && ptBest;
-    if (isHit || isNear || showAll) {
+    if (isHit || isNear || showAll || points.length === 1) {
       const color = isHit ? '#e040fb' : isNear ? '#ffd54f' : '#8899bb';
       const radius = isHit ? 6 : isNear ? 5 : 4;
       const m = L.circleMarker([lat, lon], {
