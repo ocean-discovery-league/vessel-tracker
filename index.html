@@ -3518,8 +3518,7 @@ function exportEEZCSV() {
 }
 
 // Build list once zoneData is ready (called after zones are drawn)
-setTimeout(() => renderEEZList(), 500);
-renderRecentPoints();
+setTimeout(() => { renderEEZList(); renderRecentPoints(); }, 500);
 
 // Deep-link: ?zone=ZoneName opens and highlights that zone on load
 setTimeout(() => {
