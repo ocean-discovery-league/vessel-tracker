@@ -346,6 +346,13 @@
         <button class="btn" onclick="runPointVerification()" style="margin-top:0;">Check This Point</button>
         <button class="btn" onclick="clearVerification()" style="margin-top:6px;background:#0E2446;">✕ Clear</button>
         <div id="verify-point-status" style="font-size:10px;color:#41B9C3;margin-top:6px;"></div>
+        <div id="recent-points-section" style="margin-top:10px;display:none;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;">
+            <span style="font-size:9px;font-weight:700;color:#41B9C3;letter-spacing:1px;text-transform:uppercase;">Recently Checked</span>
+            <button onclick="clearRecentPoints()" style="background:none;border:none;color:#8899bb;font-size:9px;cursor:pointer;padding:0;">Clear</button>
+          </div>
+          <div id="recent-points-list"></div>
+        </div>
       </div>
 
       <!-- Results (shared) -->
@@ -3512,6 +3519,7 @@ function exportEEZCSV() {
 
 // Build list once zoneData is ready (called after zones are drawn)
 setTimeout(() => renderEEZList(), 500);
+renderRecentPoints();
 
 // Deep-link: ?zone=ZoneName opens and highlights that zone on load
 setTimeout(() => {
@@ -4078,6 +4086,41 @@ async function runCSVVerification(event) {
   }
 }
 
+let _recentPoints = JSON.parse(localStorage.getItem('recentCheckedPoints') || '[]');
+
+function renderRecentPoints() {
+  const sec = document.getElementById('recent-points-section');
+  const list = document.getElementById('recent-points-list');
+  if (!_recentPoints.length) { sec.style.display = 'none'; return; }
+  sec.style.display = '';
+  list.innerHTML = _recentPoints.map((p, i) => {
+    const hitColor = p.hit ? '#e040fb' : p.near ? '#ffd54f' : '#8899bb';
+    const hitLabel = p.hit ? '● hit' : p.near ? '◎ near' : '— no zone';
+    return `<div onclick="reloadRecentPoint(${i})" style="display:flex;justify-content:space-between;align-items:center;padding:4px 7px;border-radius:3px;margin-bottom:2px;background:#041018;border:1px solid #0d2535;cursor:pointer;" onmouseover="this.style.background='#061a2a'" onmouseout="this.style.background='#041018'">
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:9px;color:#c8ddf0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${p.label}</div>
+        <div style="font-size:8px;color:#8899bb;">${p.lat.toFixed(4)}, ${p.lon.toFixed(4)}</div>
+      </div>
+      <span style="font-size:8px;color:${hitColor};margin-left:6px;flex-shrink:0;">${hitLabel}</span>
+    </div>`;
+  }).join('');
+}
+
+function reloadRecentPoint(i) {
+  const p = _recentPoints[i];
+  if (!p) return;
+  document.getElementById('verify-lat').value = p.lat;
+  document.getElementById('verify-lon').value = p.lon;
+  document.getElementById('verify-label').value = p.label !== `${p.lat.toFixed(4)}, ${p.lon.toFixed(4)}` ? p.label : '';
+  runPointVerification();
+}
+
+function clearRecentPoints() {
+  _recentPoints = [];
+  localStorage.removeItem('recentCheckedPoints');
+  renderRecentPoints();
+}
+
 function runPointVerification() {
   const lat = parseFloat(document.getElementById('verify-lat').value);
   const lon = parseFloat(document.getElementById('verify-lon').value);
@@ -4091,6 +4134,18 @@ function runPointVerification() {
   statusEl.textContent = '';
   verifyPoints([{ lat, lon, label }]);
   map.setView([lat, lon], 10);
+
+  // Determine hit/near status after verifyPoints runs
+  setTimeout(() => {
+    const summary = document.getElementById('verify-summary').textContent;
+    const hit = summary.includes('1 intersections') || /[1-9]\d* intersections/.test(summary);
+    const near = !hit && (summary.includes('1 near') || /[1-9]\d* near/.test(summary));
+    _recentPoints = _recentPoints.filter(p => !(Math.abs(p.lat - lat) < 0.0001 && Math.abs(p.lon - lon) < 0.0001));
+    _recentPoints.unshift({ lat, lon, label, hit, near });
+    if (_recentPoints.length > 10) _recentPoints.length = 10;
+    localStorage.setItem('recentCheckedPoints', JSON.stringify(_recentPoints));
+    renderRecentPoints();
+  }, 50);
 }
 
 </script>
