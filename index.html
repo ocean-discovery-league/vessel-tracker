@@ -3339,14 +3339,19 @@ async function toggleODLDives() {
     btn.querySelector('svg').setAttribute('stroke', '#fff');
   }
 
-  const { types, institutions, platforms, dives } = odlDivesData;
+  const { types, institutions, platforms, countries, sovereigns, jurisdictions, dives } = odlDivesData;
   const typeColors = { ROV:'#29b6f6', HOV:'#66bb6a', AUV:'#ce93d8', Lander:'#ffa726', 'Camera Tow':'#fff176' };
 
   const markers = dives.map(d => {
-    const [lat, lon, typeIdx, year, instIdx, platIdx, depth] = d;
-    const typeName = types[typeIdx] || 'Other';
-    const institution = institutions[instIdx] || '—';
-    const platform = platforms[platIdx] || '—';
+    const [lat, lon, typeIdx, year, instIdx, platIdx, countryIdx, depth, gebco, sovereignIdx, jurisdictionIdx] = d;
+    const typeName   = types[typeIdx]        || 'Other';
+    const institution= institutions[instIdx] || '—';
+    const platform   = platforms[platIdx]    || '—';
+    const country    = countries[countryIdx] || '—';
+    const sovereign  = sovereigns[sovereignIdx] || '—';
+    const jurisdiction = jurisdictions[jurisdictionIdx] || '—';
+    const depthDisplay = depth ? `${Math.abs(depth).toLocaleString()} m` : '—';
+    const gebcoDisplay = gebco ? `${Math.abs(gebco).toLocaleString()} m` : '—';
     const color = typeColors[typeName] || '#90a4ae';
     const m = L.circleMarker([lat, pacificLon(lon)], {
       radius: 3, color, fillColor: color, fillOpacity: 0.75, weight: 0.5, opacity: 0.9
@@ -3354,12 +3359,16 @@ async function toggleODLDives() {
     m.on('click', e => {
       L.DomEvent.stopPropagation(e);
       odlDivesPopup.setLatLng([lat, pacificLon(lon)]).setContent(`
-        <div style="min-width:210px;font-family:'Montserrat',sans-serif;">
+        <div style="min-width:220px;font-family:'Montserrat',sans-serif;">
           <div style="font-weight:700;font-size:12px;margin-bottom:6px;color:#a5d6a7;">${typeName} — ${year || '—'}</div>
           <table style="font-size:11px;border-collapse:collapse;width:100%">
             <tr><td style="color:#666;padding:2px 8px 2px 0">Platform</td><td><b>${platform}</b></td></tr>
             <tr><td style="color:#666;padding:2px 8px 2px 0">Institution</td><td><b>${institution}</b></td></tr>
-            <tr><td style="color:#666;padding:2px 8px 2px 0">Depth</td><td><b>${depth ? depth + ' m' : '—'}</b></td></tr>
+            <tr><td style="color:#666;padding:2px 8px 2px 0">Country</td><td><b>${country}</b></td></tr>
+            <tr><td style="color:#666;padding:2px 8px 2px 0">Depth (provided)</td><td><b>${depthDisplay}</b></td></tr>
+            <tr><td style="color:#666;padding:2px 8px 2px 0">Depth (GEBCO)</td><td><b>${gebcoDisplay}</b></td></tr>
+            <tr><td style="color:#666;padding:2px 8px 2px 0">Sovereign</td><td><b>${sovereign}</b></td></tr>
+            <tr><td style="color:#666;padding:2px 8px 2px 0">Jurisdiction</td><td><b>${jurisdiction}</b></td></tr>
             <tr><td style="color:#666;padding:2px 8px 2px 0">Lat / Lon</td><td><b>${lat}°, ${lon}°</b></td></tr>
           </table>
           <div style="font-size:9px;color:#999;margin-top:6px;">ODL Internal Dataset</div>
