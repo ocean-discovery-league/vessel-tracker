@@ -326,8 +326,8 @@
           Optional: <b style="color:#81e1e7;">name</b> or <b style="color:#81e1e7;">label</b> column.
         </div>
         <label class="btn" style="display:block;text-align:center;cursor:pointer;padding:8px;margin-bottom:6px;">
-          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="12" viewBox="0 0 20 16" fill="currentColor" style="vertical-align:-2px;margin-right:5px;flex-shrink:0;"><path d="M2 3a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2H9.5L7.5 3H2z"/></svg>Choose CSV File
-          <input type="file" id="verify-csv-input" accept=".csv,.txt" style="display:none;" onchange="runCSVVerification(event)">
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="12" viewBox="0 0 20 16" fill="currentColor" style="vertical-align:-2px;margin-right:5px;flex-shrink:0;"><path d="M2 3a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2H9.5L7.5 3H2z"/></svg>Choose CSV or KML File
+          <input type="file" id="verify-csv-input" accept=".csv,.txt,.kml" style="display:none;" onchange="runFileVerification(event)">
         </label>
         <div style="display:flex;gap:6px;margin-bottom:10px;">
           <label style="display:flex;align-items:center;gap:4px;font-size:10px;color:#8899bb;cursor:pointer;">
@@ -4112,7 +4112,30 @@ function verifyPoints(points) {
   document.getElementById('verify-results').style.display = '';
 }
 
-async function runCSVVerification(event) {
+function parseKML(text) {
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(text, 'application/xml');
+  const placemarks = [...doc.querySelectorAll('Placemark')];
+  const points = [];
+  for (const pm of placemarks) {
+    const coordEl = pm.querySelector('Point coordinates');
+    if (!coordEl) continue;
+    const parts = coordEl.textContent.trim().split(',');
+    const lon = parseFloat(parts[0]);
+    const lat = parseFloat(parts[1]);
+    if (isNaN(lat) || isNaN(lon)) continue;
+    const nameEl = pm.querySelector('name');
+    const label = nameEl ? nameEl.textContent.trim() : `${lat.toFixed(4)}, ${lon.toFixed(4)}`;
+    // Pull depth from ExtendedData if present
+    const depthEl = [...pm.querySelectorAll('SimpleData')].find(el => el.getAttribute('name') === 'Depth');
+    const depth = depthEl ? Math.round(parseFloat(depthEl.textContent)) : null;
+    points.push({ lat, lon, label: depth != null ? `${label} (${depth} m)` : label });
+  }
+  if (!points.length) throw new Error('No Point placemarks found in KML');
+  return points;
+}
+
+async function runFileVerification(event) {
   const file = event.target.files[0];
   if (!file) return;
   const statusEl = document.getElementById('verify-csv-status');
@@ -4120,7 +4143,8 @@ async function runCSVVerification(event) {
   statusEl.style.color = '#41B9C3';
   try {
     const text = await file.text();
-    const points = parseCSV(text);
+    const isKML = file.name.toLowerCase().endsWith('.kml');
+    const points = isKML ? parseKML(text) : parseCSV(text);
     statusEl.textContent = `${points.length} points loaded from "${file.name}"`;
     statusEl.style.color = '#81e1e7';
     verifyPoints(points);
