@@ -2966,10 +2966,15 @@ async function toggleNotifications() {
   updateNotifUI();
 }
 
-const _emailSent = new Map(Object.entries(JSON.parse(localStorage.getItem('_emailSent') || '{}')));
-function _emailSentSet(key) {
-  _emailSent.set(key, Date.now());
-  localStorage.setItem('_emailSent', JSON.stringify(Object.fromEntries(_emailSent)));
+function _emailSentCheck(key) {
+  try { return !!JSON.parse(localStorage.getItem('_emailSent') || '{}')[key]; } catch(e) { return false; }
+}
+function _emailSentMark(key) {
+  try {
+    const store = JSON.parse(localStorage.getItem('_emailSent') || '{}');
+    store[key] = Date.now();
+    localStorage.setItem('_emailSent', JSON.stringify(store));
+  } catch(e) {}
 }
 function zoneNotify(title, body, color, vessel, zone, zoneObj) {
   if (notificationsEnabled && Notification.permission === 'granted') {
@@ -2983,9 +2988,8 @@ function zoneNotify(title, body, color, vessel, zone, zoneObj) {
   // Email via Vercel API — deduplicate per zone+vessel within 30 minutes
   if (zone && vessel) {
     const key = zone + '|' + vessel;
-    const last = _emailSent.get(key) || 0;
-    if (last) return;
-    _emailSentSet(key);
+    if (_emailSentCheck(key)) return;
+    _emailSentMark(key);
     const zoneDetails = zoneObj ? {
       lat: zoneObj.lat, lon: zoneObj.lon, depth: zoneObj.depth,
       geomorph: zoneObj.geomorph, ocean: zoneObj.ocean, eez: zoneObj.eez,
