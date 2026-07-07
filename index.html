@@ -2980,7 +2980,7 @@ function zoneNotify(title, body, color, vessel, zone, zoneObj) {
   if (zone && vessel) {
     const key = zone + '|' + vessel;
     const last = _emailSent.get(key) || 0;
-    if (Date.now() - last < 30 * 60 * 1000) return;
+    if (Date.now() - last < 90 * 60 * 1000) return;
     _emailSent.set(key, Date.now());
     const zoneDetails = zoneObj ? {
       lat: zoneObj.lat, lon: zoneObj.lon, depth: zoneObj.depth,
