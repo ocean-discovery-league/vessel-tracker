@@ -2966,7 +2966,11 @@ async function toggleNotifications() {
   updateNotifUI();
 }
 
-const _emailSent = new Map(); // zone|vessel -> timestamp, 30-min cooldown
+const _emailSent = new Map(Object.entries(JSON.parse(localStorage.getItem('_emailSent') || '{}')));
+function _emailSentSet(key) {
+  _emailSent.set(key, Date.now());
+  localStorage.setItem('_emailSent', JSON.stringify(Object.fromEntries(_emailSent)));
+}
 function zoneNotify(title, body, color, vessel, zone, zoneObj) {
   if (notificationsEnabled && Notification.permission === 'granted') {
     const iconColor = (color || '#e040fb').replace('#', '%23');
@@ -2980,8 +2984,8 @@ function zoneNotify(title, body, color, vessel, zone, zoneObj) {
   if (zone && vessel) {
     const key = zone + '|' + vessel;
     const last = _emailSent.get(key) || 0;
-    if (Date.now() - last < 90 * 60 * 1000) return;
-    _emailSent.set(key, Date.now());
+    if (last) return;
+    _emailSentSet(key);
     const zoneDetails = zoneObj ? {
       lat: zoneObj.lat, lon: zoneObj.lon, depth: zoneObj.depth,
       geomorph: zoneObj.geomorph, ocean: zoneObj.ocean, eez: zoneObj.eez,
