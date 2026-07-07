@@ -1036,7 +1036,14 @@ function checkZones(lat, lon, vesselName) {
         <div class="zone-dist">${Math.round(z.d)}m from center · ${z.depth} · ${z.geomorph}</div>
       </div>`
     ).join('');
-    for (const z of allHits) zss(z, { weight: 2, color: '#e040fb', fillOpacity: 0.4 });
+    for (const z of allHits) {
+      zss(z, { weight: 2, color: '#e040fb', fillOpacity: 0.4 });
+      zoneNotify(
+        `Zone Intersection: ${z.vessel}`,
+        `${z.vessel} is within ${Math.round(z.d)}m of ${z.name} (${z.geomorph}, ${z.depth})`,
+        '#e040fb', z.vessel, z.name, z
+      );
+    }
   } else {
     alertBox.classList.remove('active');
   }
