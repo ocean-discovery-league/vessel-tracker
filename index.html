@@ -1158,6 +1158,8 @@ map.on('click', function(e) {
       .setLatLng(e.latlng)
       .setContent(buildZonePopupContent(best))
       .openOn(map);
+    const el = zonePopup.getElement();
+    if (el) L.DomEvent.disableClickPropagation(el);
   }
 });
 
@@ -2834,6 +2836,8 @@ function jumpToZone(name) {
         <div style="font-size:10px;color:#444;">${nmItems.join('<br>')}</div>
       </div>` : '';
   zonePopup.setLatLng([z.lat, pacificLon(z.lon)]).setContent(buildZonePopupContent(z)).openOn(map);
+  const el = zonePopup.getElement();
+  if (el) L.DomEvent.disableClickPropagation(el);
 }
 
 // ── NOAA Ship Okeanos Explorer ────────────────────────────────────────────────
