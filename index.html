@@ -548,6 +548,9 @@
     <line x1="21" y1="8" x2="21" y2="13"/>
   </svg>
 </div>
+<div id="odl-dives-color-ctrl" style="display:none;position:fixed;top:224px;right:48px;z-index:1000;background:#0E2446;border:1px solid #187D8B;border-radius:6px;padding:5px 10px;box-shadow:0 2px 6px rgba(0,0,0,0.5);align-items:center;gap:8px;font-family:'Montserrat',sans-serif;font-size:10px;color:#81e1e7;white-space:nowrap;">
+  Color <span id="odl-dives-color-lbl" onclick="toggleODLDivesColors()" style="cursor:pointer;font-size:9px;font-weight:600;padding:2px 6px;border:1px solid #a5d6a7;border-radius:3px;color:#a5d6a7;background:#041018;">ON</span>
+</div>
 <div id="odl-dives-btn" onclick="toggleODLDives()"
   class="map-overlay-btn"
   style="position:fixed;top:224px;right:10px;z-index:1000;width:34px;height:34px;
@@ -558,6 +561,9 @@
        stroke="#a5d6a7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
     <circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.22 4.22l2.12 2.12M17.66 17.66l2.12 2.12M2 12h3M19 12h3M4.22 19.78l2.12-2.12M17.66 6.34l2.12-2.12"/>
   </svg>
+</div>
+<div id="odl-cleaned-color-ctrl" style="display:none;position:fixed;top:260px;right:48px;z-index:1000;background:#0E2446;border:1px solid #187D8B;border-radius:6px;padding:5px 10px;box-shadow:0 2px 6px rgba(0,0,0,0.5);align-items:center;gap:8px;font-family:'Montserrat',sans-serif;font-size:10px;color:#81e1e7;white-space:nowrap;">
+  Color <span id="odl-cleaned-color-lbl" onclick="toggleODLCleanedColors()" style="cursor:pointer;font-size:9px;font-weight:600;padding:2px 6px;border:1px solid #81d4fa;border-radius:3px;color:#81d4fa;background:#041018;">ON</span>
 </div>
 <div id="odl-cleaned-btn" onclick="toggleODLCleaned()"
   class="map-overlay-btn"
@@ -570,6 +576,9 @@
     <circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.22 4.22l2.12 2.12M17.66 17.66l2.12 2.12M2 12h3M19 12h3M4.22 19.78l2.12-2.12M17.66 6.34l2.12-2.12"/>
   </svg>
 </div>
+<div id="exgoal-color-ctrl" style="display:flex;position:fixed;top:296px;right:48px;z-index:1000;background:#0E2446;border:1px solid #187D8B;border-radius:6px;padding:5px 10px;box-shadow:0 2px 6px rgba(0,0,0,0.5);align-items:center;gap:8px;font-family:'Montserrat',sans-serif;font-size:10px;color:#81e1e7;white-space:nowrap;">
+  Color <span id="exgoal-color-lbl" onclick="toggleOceanColors()" style="cursor:pointer;font-size:9px;font-weight:600;padding:2px 6px;border:1px solid #41B9C3;border-radius:3px;color:#41B9C3;background:#041018;">ON</span>
+</div>
 <div id="exgoal-btn" onclick="toggleExGoals()"
   class="map-overlay-btn"
   style="position:fixed;top:296px;right:10px;z-index:1000;width:34px;height:34px;
@@ -581,12 +590,15 @@
     <circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/><line x1="12" y1="2" x2="12" y2="4"/><line x1="12" y1="20" x2="12" y2="22"/><line x1="2" y1="12" x2="4" y2="12"/><line x1="20" y1="12" x2="22" y2="12"/>
   </svg>
 </div>
+<div id="historic-color-ctrl" style="display:none;position:fixed;top:332px;right:48px;z-index:1000;background:#0E2446;border:1px solid #187D8B;border-radius:6px;padding:5px 10px;box-shadow:0 2px 6px rgba(0,0,0,0.5);align-items:center;gap:8px;font-family:'Montserrat',sans-serif;font-size:10px;color:#81e1e7;white-space:nowrap;">
+  Color <span id="historic-color-lbl" onclick="toggleHistoricDiveColors()" style="cursor:pointer;font-size:9px;font-weight:600;padding:2px 6px;border:1px solid #29b6f6;border-radius:3px;color:#29b6f6;background:#041018;">ON</span>
+</div>
 <div id="historic-dives-btn" onclick="toggleHistoricDives()"
   class="map-overlay-btn"
   style="position:fixed;top:332px;right:10px;z-index:1000;width:34px;height:34px;
          background:#0E2446;border:2px solid #187D8B;border-radius:6px;cursor:pointer;
          display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.5);">
-  <span class="map-btn-tip">Historic Dives</span>
+  <span class="map-btn-tip">Historic Dives (from Paper)</span>
   <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
        stroke="#81e1e7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
     <circle cx="12" cy="12" r="10"/>
@@ -813,8 +825,10 @@ for (const [name, color, shape] of [
 const hdGroup = document.createElement('div');
 hdGroup.className = 'legend-group';
 hdGroup.id = 'legend-historic-dives-group';
-hdGroup.textContent = 'Historic Dives (Bell et al.)';
 hdGroup.style.display = 'none';
+hdGroup.style.cssText += 'display:none;align-items:center;justify-content:space-between;cursor:pointer;user-select:none;';
+hdGroup.innerHTML = `<span>Historic Dives (Bell et al.)</span><span id="dive-color-toggle" style="font-size:9px;font-weight:600;letter-spacing:0.5px;padding:2px 6px;border:1px solid #29b6f6;border-radius:3px;color:#29b6f6;background:#041018;">ON</span>`;
+hdGroup.onclick = toggleHistoricDiveColors;
 legendEl.appendChild(hdGroup);
 for (const [name, color] of [
   ['ROV', '#29b6f6'],
@@ -3411,6 +3425,7 @@ function toggleExGoals() {
   btn.style.background  = exGoalsVisible ? '#004D64' : '#0E2446';
   btn.style.borderColor = exGoalsVisible ? '#41B9C3' : '#187D8B';
   btn.querySelector('svg').setAttribute('stroke', exGoalsVisible ? '#41B9C3' : '#4a6070');
+  document.getElementById('exgoal-color-ctrl').style.display = exGoalsVisible ? 'flex' : 'none';
 }
 
 let historicDivesData   = null;
@@ -3426,6 +3441,7 @@ async function toggleHistoricDives() {
     btn.querySelector('svg').setAttribute('stroke', '#81e1e7');
     document.getElementById('legend-historic-dives-group').style.display = 'none';
     document.querySelectorAll('[data-historic-dive-legend]').forEach(el => el.style.display = 'none');
+    document.getElementById('historic-color-ctrl').style.display = 'none';
     return;
   }
   btn.style.background  = '#004D64';
@@ -3456,6 +3472,7 @@ async function toggleHistoricDives() {
       radius: 3, color, fillColor: color,
       fillOpacity: 0.7, weight: 0.5, opacity: 0.9
     });
+    m._diveTypeIdx = typeIdx;
     m.on('click', e => {
       L.DomEvent.stopPropagation(e);
       historicDivesPopup.setLatLng([lat, pacificLon(lon)]).setContent(`
@@ -3476,9 +3493,13 @@ async function toggleHistoricDives() {
   });
 
   historicDivesLayer = L.featureGroup(markers).addTo(map);
+  if (!diveColorsOn) {
+    historicDivesLayer.getLayers().forEach(m => m.setStyle({ color: GREY_DIVE, fillColor: GREY_DIVE }));
+  }
   historicDivesActive = true;
   document.getElementById('legend-historic-dives-group').style.display = '';
   document.querySelectorAll('[data-historic-dive-legend]').forEach(el => el.style.display = '');
+  document.getElementById('historic-color-ctrl').style.display = 'flex';
 }
 
 // ── ODL Internal Dives Layer ─────────────────────────────────────────────────
@@ -3497,6 +3518,7 @@ async function toggleODLDives() {
     btn.querySelector('svg').setAttribute('stroke', '#a5d6a7');
     document.getElementById('legend-odl-dives-group').style.display = 'none';
     document.querySelectorAll('[data-odl-dive-legend]').forEach(el => el.style.display = 'none');
+    document.getElementById('odl-dives-color-ctrl').style.display = 'none';
     return;
   }
   btn.style.background  = '#003322';
@@ -3536,6 +3558,7 @@ async function toggleODLDives() {
     const m = L.circleMarker([lat, pacificLon(lon)], {
       radius: 3, color, fillColor: color, fillOpacity: 0.75, weight: 0.5, opacity: 0.9
     });
+    m._diveTypeName = typeName;
     m.on('click', e => {
       L.DomEvent.stopPropagation(e);
       odlDivesPopup.setLatLng([lat, pacificLon(lon)]).setContent(`
@@ -3558,9 +3581,11 @@ async function toggleODLDives() {
   });
 
   odlDivesLayer = L.featureGroup(markers).addTo(map);
+  if (!odlDivesColorsOn) odlDivesLayer.getLayers().forEach(m => m.setStyle({ color: GREY_DIVE, fillColor: GREY_DIVE }));
   odlDivesActive = true;
   document.getElementById('legend-odl-dives-group').style.display = '';
   document.querySelectorAll('[data-odl-dive-legend]').forEach(el => el.style.display = '');
+  document.getElementById('odl-dives-color-ctrl').style.display = 'flex';
 }
 
 // ── ODL Cleaned Dives Layer ──────────────────────────────────────────────────
@@ -3579,6 +3604,7 @@ async function toggleODLCleaned() {
     btn.querySelector('svg').setAttribute('stroke', '#81d4fa');
     document.getElementById('legend-odl-cleaned-group').style.display = 'none';
     document.querySelectorAll('[data-odl-cleaned-legend]').forEach(el => el.style.display = 'none');
+    document.getElementById('odl-cleaned-color-ctrl').style.display = 'none';
     return;
   }
   btn.style.background  = '#00344a';
@@ -3618,6 +3644,7 @@ async function toggleODLCleaned() {
     const m = L.circleMarker([lat, pacificLon(lon)], {
       radius: 3, color, fillColor: color, fillOpacity: 0.75, weight: 0.5, opacity: 0.9
     });
+    m._diveTypeName = typeName;
     m.on('click', e => {
       L.DomEvent.stopPropagation(e);
       odlCleanedPopup.setLatLng([lat, pacificLon(lon)]).setContent(`
@@ -3640,9 +3667,11 @@ async function toggleODLCleaned() {
   });
 
   odlCleanedLayer = L.featureGroup(markers).addTo(map);
+  if (!odlCleanedColorsOn) odlCleanedLayer.getLayers().forEach(m => m.setStyle({ color: GREY_DIVE, fillColor: GREY_DIVE }));
   odlCleanedActive = true;
   document.getElementById('legend-odl-cleaned-group').style.display = '';
   document.querySelectorAll('[data-odl-cleaned-legend]').forEach(el => el.style.display = '');
+  document.getElementById('odl-cleaned-color-ctrl').style.display = 'flex';
 }
 
 // ── EEZ Filter ────────────────────────────────────────────────────────────────
@@ -3965,6 +3994,8 @@ function toggleOceanColors() {
   lbl.textContent = oceanColorsOn ? 'ON' : 'OFF';
   lbl.style.color       = oceanColorsOn ? '#41B9C3' : '#8899bb';
   lbl.style.borderColor = oceanColorsOn ? '#41B9C3' : '#8899bb';
+  const mapLbl = document.getElementById('exgoal-color-lbl');
+  if (mapLbl) { mapLbl.textContent = oceanColorsOn ? 'ON' : 'OFF'; mapLbl.style.color = oceanColorsOn ? '#41B9C3' : '#8899bb'; mapLbl.style.borderColor = oceanColorsOn ? '#41B9C3' : '#8899bb'; }
   // Show/hide swatches
   document.querySelectorAll('[data-ocean-swatch]').forEach(el => {
     el.style.opacity = oceanColorsOn ? '1' : '0.35';
@@ -3974,6 +4005,57 @@ function toggleOceanColors() {
     if (ZONE_LAND.has(z.name) || ZONE_SHALLOW.has(z.name) || ZONE_OVERLAPS.has(z.name)) continue;
     const col = oceanColorsOn ? z.defaultColor : GREY_ZONE;
     zss(z, { color: col, fillColor: col });
+  }
+}
+
+let diveColorsOn = true;
+const GREY_DIVE = '#607d8b';
+function toggleHistoricDiveColors() {
+  diveColorsOn = !diveColorsOn;
+  const lbl = document.getElementById('dive-color-toggle');
+  if (lbl) { lbl.textContent = diveColorsOn ? 'ON' : 'OFF'; lbl.style.color = diveColorsOn ? '#29b6f6' : '#8899bb'; lbl.style.borderColor = diveColorsOn ? '#29b6f6' : '#8899bb'; }
+  const mapLbl = document.getElementById('historic-color-lbl');
+  if (mapLbl) { mapLbl.textContent = diveColorsOn ? 'ON' : 'OFF'; mapLbl.style.color = diveColorsOn ? '#29b6f6' : '#8899bb'; mapLbl.style.borderColor = diveColorsOn ? '#29b6f6' : '#8899bb'; }
+  document.querySelectorAll('[data-historic-dive-legend]').forEach(el => {
+    el.style.opacity = diveColorsOn ? '1' : '0.35';
+  });
+  if (historicDivesLayer) {
+    historicDivesLayer.getLayers().forEach(m => {
+      const col = diveColorsOn ? (DIVE_TYPE_COLORS[m._diveTypeIdx] ?? DIVE_TYPE_COLORS[5]) : GREY_DIVE;
+      m.setStyle({ color: col, fillColor: col });
+    });
+  }
+}
+
+let odlDivesColorsOn = true;
+function toggleODLDivesColors() {
+  odlDivesColorsOn = !odlDivesColorsOn;
+  const lbl = document.getElementById('odl-dives-color-lbl');
+  const col = odlDivesColorsOn ? '#a5d6a7' : '#8899bb';
+  lbl.textContent = odlDivesColorsOn ? 'ON' : 'OFF';
+  lbl.style.color = col; lbl.style.borderColor = col;
+  if (odlDivesLayer) {
+    const typeColors = { ROV:'#29b6f6', HOV:'#66bb6a', AUV:'#ce93d8', Lander:'#ffa726', 'Camera Tow':'#fff176' };
+    odlDivesLayer.getLayers().forEach(m => {
+      const c = odlDivesColorsOn ? (typeColors[m._diveTypeName] || '#90a4ae') : GREY_DIVE;
+      m.setStyle({ color: c, fillColor: c });
+    });
+  }
+}
+
+let odlCleanedColorsOn = true;
+function toggleODLCleanedColors() {
+  odlCleanedColorsOn = !odlCleanedColorsOn;
+  const lbl = document.getElementById('odl-cleaned-color-lbl');
+  const col = odlCleanedColorsOn ? '#81d4fa' : '#8899bb';
+  lbl.textContent = odlCleanedColorsOn ? 'ON' : 'OFF';
+  lbl.style.color = col; lbl.style.borderColor = col;
+  if (odlCleanedLayer) {
+    const typeColors = { ROV:'#29b6f6', HOV:'#66bb6a', AUV:'#ce93d8', Lander:'#ffa726', 'Camera Tow':'#fff176' };
+    odlCleanedLayer.getLayers().forEach(m => {
+      const c = odlCleanedColorsOn ? (typeColors[m._diveTypeName] || '#90a4ae') : GREY_DIVE;
+      m.setStyle({ color: c, fillColor: c });
+    });
   }
 }
 
