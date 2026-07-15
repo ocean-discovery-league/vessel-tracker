@@ -209,17 +209,13 @@
         <div class="subsection-divider"></div>
         <div class="subsection-label" onclick="toggleNautilusROV()" style="cursor:pointer;user-select:none;">ROV Live Data <span style="font-size:8px;color:#29b6f6;font-weight:400;letter-spacing:0;text-transform:none;">(graphs.oceanexplorationtrust.org)</span><span id="n-rov-arrow" style="margin-left:auto;">▼</span></div>
         <div id="n-rov-body">
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-bottom:4px;">
-            <div style="font-size:9px;color:#8899bb;text-align:center;padding-top:2px;">ROV Depth</div>
-            <div style="font-size:9px;color:#8899bb;text-align:center;padding-top:2px;">Water Temp</div>
-            <iframe src="https://graphs.oceanexplorationtrust.org/d-solo/57rJOPNGk/realtime-data?orgId=1&panelId=70&refresh=5s" width="100%" height="70" frameborder="0" style="border-radius:4px;background:#111;"></iframe>
-            <iframe src="https://graphs.oceanexplorationtrust.org/d-solo/57rJOPNGk/realtime-data?orgId=1&panelId=68&refresh=5s" width="100%" height="70" frameborder="0" style="border-radius:4px;background:#111;"></iframe>
-            <div style="font-size:9px;color:#8899bb;text-align:center;padding-top:2px;">CTD Salinity</div>
-            <div style="font-size:9px;color:#8899bb;text-align:center;padding-top:2px;">O₂ Saturation</div>
-            <iframe src="https://graphs.oceanexplorationtrust.org/d-solo/57rJOPNGk/realtime-data?orgId=1&panelId=72&refresh=5s" width="100%" height="70" frameborder="0" style="border-radius:4px;background:#111;"></iframe>
-            <iframe src="https://graphs.oceanexplorationtrust.org/d-solo/57rJOPNGk/realtime-data?orgId=1&panelId=64&refresh=5s" width="100%" height="70" frameborder="0" style="border-radius:4px;background:#111;"></iframe>
+          <div class="data-grid">
+            <div class="data-item"><div class="data-label">ROV Depth</div><div class="data-value" id="n-rov-depth">—</div></div>
+            <div class="data-item"><div class="data-label">Water Temp</div><div class="data-value" id="n-rov-temp">—</div></div>
+            <div class="data-item"><div class="data-label">CTD Salinity</div><div class="data-value" id="n-rov-sal">—</div></div>
+            <div class="data-item"><div class="data-label">O₂ Saturation</div><div class="data-value" id="n-rov-o2">—</div></div>
           </div>
-          <a href="https://graphs.oceanexplorationtrust.org/d/57rJOPNGk/realtime-data?orgId=1&refresh=5s" target="_blank" rel="noopener" style="display:block;font-size:9px;color:#29b6f6;text-align:center;margin-top:2px;text-decoration:none;opacity:0.7;">Full dashboard ↗</a>
+          <a href="https://graphs.oceanexplorationtrust.org/d/57rJOPNGk/realtime-data?orgId=1&refresh=5s" target="_blank" rel="noopener" style="display:block;font-size:9px;color:#29b6f6;text-align:center;margin-top:6px;text-decoration:none;opacity:0.7;">Full dashboard ↗</a>
         </div>
       </div>
       <button class="btn" onclick="centerOnNautilus()"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="14" viewBox="0 0 24 28" fill="currentColor" style="vertical-align:-2px;margin-right:5px;flex-shrink:0;"><path d="M12 0C7.6 0 4 3.6 4 8c0 6 8 16 8 16s8-10 8-16c0-4.4-3.6-8-8-8zm0 11a3 3 0 1 1 0-6 3 3 0 0 1 0 6z"/></svg>Center on <i>Nautilus</i></button>
@@ -1283,15 +1279,36 @@ function haversineM(lat1, lon1, lat2, lon2) {
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
 }
 
+function updateROVDisplay(data) {
+  const fmt = (v, digits, unit) => v != null ? Number(v).toFixed(digits) + unit : '—';
+  document.getElementById('n-rov-depth').textContent = data.depth != null ? Math.abs(data.depth).toFixed(0) + ' m' : '—';
+  document.getElementById('n-rov-temp').textContent  = fmt(data.temp,  2, ' °C');
+  document.getElementById('n-rov-sal').textContent   = fmt(data.sal,   1, ' PSU');
+  document.getElementById('n-rov-o2').textContent    = fmt(data.o2,    1, '%');
+}
+
+async function fetchROVData() {
+  try {
+    const r = await fetch('/api/rov-position');
+    if (!r.ok) return null;
+    return await r.json();
+  } catch(e) { return null; }
+}
+
+async function pollROVDisplay() {
+  const data = await fetchROVData();
+  if (data) updateROVDisplay(data);
+}
+
 async function checkROVZone() {
   const diveStatus = (document.getElementById('n-dive')?.textContent || '').toLowerCase().trim();
   // "off deck" = ROV deployed and in water
   if (!diveStatus || diveStatus === '—' || diveStatus.includes('on deck') || diveStatus.includes('transit') || diveStatus.includes('stowed')) return;
 
   try {
-    const r = await fetch('/api/rov-position');
-    if (!r.ok) return;
-    const { lat, lon, timestamp } = await r.json();
+    const data = await fetchROVData();
+    if (!data) return;
+    const { lat, lon } = data;
     if (lat == null || lon == null) return;
 
     for (const z of zoneData) {
@@ -1312,6 +1329,7 @@ async function checkROVZone() {
 }
 
 setInterval(checkROVZone, ROV_POLL_MS);
+setInterval(pollROVDisplay, 30_000); // refresh display boxes every 30s
 
 function toggleNautilusROV() {
   const body = document.getElementById('n-rov-body');
@@ -1341,7 +1359,9 @@ async function fetchNautilusData() {
 
     // Show ROV live data section; auto-expand if ROV appears to be in the water
     const rovSection = document.getElementById('n-rov-section');
+    const wasHidden = rovSection.style.display === 'none';
     rovSection.style.display = '';
+    if (wasHidden) pollROVDisplay();
     const status = (a.divestatus ?? '').toLowerCase();
     const inWater = status && !status.includes('deck') && !status.includes('transit') && !status.includes('surface') && !status.includes('stowed');
     if (inWater && document.getElementById('n-rov-arrow').textContent === '▼') {
