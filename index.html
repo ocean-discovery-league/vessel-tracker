@@ -205,6 +205,23 @@
         <div class="data-item"><div class="data-label">Dive</div><div class="data-value" id="n-divenum">—</div></div>
       </div>
       <div id="n-error-msg" style="color:#ff6666;font-size:11px;margin-top:8px;display:none"></div>
+      <div id="n-rov-section" style="display:none;margin-top:8px;">
+        <div class="subsection-divider"></div>
+        <div class="subsection-label" onclick="toggleNautilusROV()" style="cursor:pointer;user-select:none;">ROV Live Data <span style="font-size:8px;color:#29b6f6;font-weight:400;letter-spacing:0;text-transform:none;">(graphs.oceanexplorationtrust.org)</span><span id="n-rov-arrow" style="margin-left:auto;">▼</span></div>
+        <div id="n-rov-body">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-bottom:4px;">
+            <div style="font-size:9px;color:#8899bb;text-align:center;padding-top:2px;">ROV Depth</div>
+            <div style="font-size:9px;color:#8899bb;text-align:center;padding-top:2px;">Water Temp</div>
+            <iframe src="https://graphs.oceanexplorationtrust.org/d-solo/57rJOPNGk/realtime-data?orgId=1&panelId=70&refresh=5s" width="100%" height="70" frameborder="0" style="border-radius:4px;background:#111;"></iframe>
+            <iframe src="https://graphs.oceanexplorationtrust.org/d-solo/57rJOPNGk/realtime-data?orgId=1&panelId=68&refresh=5s" width="100%" height="70" frameborder="0" style="border-radius:4px;background:#111;"></iframe>
+            <div style="font-size:9px;color:#8899bb;text-align:center;padding-top:2px;">CTD Salinity</div>
+            <div style="font-size:9px;color:#8899bb;text-align:center;padding-top:2px;">O₂ Saturation</div>
+            <iframe src="https://graphs.oceanexplorationtrust.org/d-solo/57rJOPNGk/realtime-data?orgId=1&panelId=72&refresh=5s" width="100%" height="70" frameborder="0" style="border-radius:4px;background:#111;"></iframe>
+            <iframe src="https://graphs.oceanexplorationtrust.org/d-solo/57rJOPNGk/realtime-data?orgId=1&panelId=64&refresh=5s" width="100%" height="70" frameborder="0" style="border-radius:4px;background:#111;"></iframe>
+          </div>
+          <a href="https://graphs.oceanexplorationtrust.org/d/57rJOPNGk/realtime-data?orgId=1&refresh=5s" target="_blank" rel="noopener" style="display:block;font-size:9px;color:#29b6f6;text-align:center;margin-top:2px;text-decoration:none;opacity:0.7;">Full dashboard ↗</a>
+        </div>
+      </div>
       <button class="btn" onclick="centerOnNautilus()"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="14" viewBox="0 0 24 28" fill="currentColor" style="vertical-align:-2px;margin-right:5px;flex-shrink:0;"><path d="M12 0C7.6 0 4 3.6 4 8c0 6 8 16 8 16s8-10 8-16c0-4.4-3.6-8-8-8zm0 11a3 3 0 1 1 0-6 3 3 0 0 1 0 6z"/></svg>Center on <i>Nautilus</i></button>
       <div class="track-info" id="n-track-info"></div>
       <div class="subsection-divider"></div>
@@ -1255,6 +1272,55 @@ function centerOnNautilus() {
   if (nautilusPos) map.setView([nautilusPos.lat, pacificLon(nautilusPos.lon)], 10);
 }
 
+// ── ROV Zone Alert ───────────────────────────────────────────────────────────
+const ROV_ZONE_RADIUS_M = 5000;
+const ROV_POLL_MS = 60_000;
+
+function haversineM(lat1, lon1, lat2, lon2) {
+  const R = 6371000, toR = Math.PI / 180;
+  const dLat = (lat2 - lat1) * toR, dLon = (lon2 - lon1) * toR;
+  const a = Math.sin(dLat/2)**2 + Math.cos(lat1*toR)*Math.cos(lat2*toR)*Math.sin(dLon/2)**2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+
+async function checkROVZone() {
+  const diveStatus = (document.getElementById('n-dive')?.textContent || '').toLowerCase().trim();
+  // "off deck" = ROV deployed and in water
+  if (!diveStatus || diveStatus === '—' || diveStatus.includes('on deck') || diveStatus.includes('transit') || diveStatus.includes('stowed')) return;
+
+  try {
+    const r = await fetch('/api/rov-position');
+    if (!r.ok) return;
+    const { lat, lon, timestamp } = await r.json();
+    if (lat == null || lon == null) return;
+
+    for (const z of zoneData) {
+      if (haversineM(lat, lon, z.lat, z.lon) <= ROV_ZONE_RADIUS_M) {
+        const rovCoords = `${lat.toFixed(5)}°, ${lon.toFixed(5)}°`;
+        zoneNotify(
+          `ROV DIVE IN ZONE — ${z.name}`,
+          `ROV Hercules is actively diving inside zone ${z.name}\nROV position: ${rovCoords}\nDive status: ${document.getElementById('n-dive').textContent}`,
+          '#e53935',
+          'ROV Nautilus (Hercules)',
+          z.name,
+          z
+        );
+        break;
+      }
+    }
+  } catch(e) {}
+}
+
+setInterval(checkROVZone, ROV_POLL_MS);
+
+function toggleNautilusROV() {
+  const body = document.getElementById('n-rov-body');
+  const arrow = document.getElementById('n-rov-arrow');
+  const collapsed = body.style.display === 'none';
+  body.style.display = collapsed ? '' : 'none';
+  arrow.textContent = collapsed ? '▼' : '▶';
+}
+
 async function fetchNautilusData() {
   try {
     const r = await fetch(NAUTILUS_URL);
@@ -1272,6 +1338,18 @@ async function fetchNautilusData() {
     document.getElementById('n-cruise').textContent  = a.cruise ?? '—';
     document.getElementById('n-divenum').textContent = a.dive ?? '—';
     document.getElementById('n-error-msg').style.display = 'none';
+
+    // Show ROV live data section; auto-expand if ROV appears to be in the water
+    const rovSection = document.getElementById('n-rov-section');
+    rovSection.style.display = '';
+    const status = (a.divestatus ?? '').toLowerCase();
+    const inWater = status && !status.includes('deck') && !status.includes('transit') && !status.includes('surface') && !status.includes('stowed');
+    if (inWater && document.getElementById('n-rov-arrow').textContent === '▼') {
+      // Already expanded — no action needed
+    } else if (inWater) {
+      document.getElementById('n-rov-body').style.display = '';
+      document.getElementById('n-rov-arrow').textContent = '▼';
+    }
 
     const dot = document.getElementById('n-dot');
     dot.className = 'vessel-dot';
