@@ -5199,10 +5199,7 @@ function makeFilterGroup(id, label, values, key, colorMap) {
 }
 
 function makeEEZGroup(eezs) {
-  const items = eezs.map(v => `<label style="display:flex;align-items:center;gap:5px;padding:3px 6px;cursor:pointer;font-size:9px;color:#81e1e7;min-width:0;" title="${escH(v)}">
-    <input type="checkbox" value="${escH(v)}" onchange="advToggle('gEezs',this)" style="flex:0 0 auto;width:10px;height:10px;accent-color:#4dd0e1;cursor:pointer;">
-    <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0;">${escH(v)}</span>
-  </label>`).join('');
+  const items = eezs.map(v => `<label style="display:block;position:relative;padding:3px 6px 3px 22px;cursor:pointer;font-size:9px;color:#81e1e7;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${escH(v)}"><input type="checkbox" value="${escH(v)}" onchange="advToggle('gEezs',this)" style="position:absolute;left:6px;top:50%;transform:translateY(-50%);width:10px;height:10px;accent-color:#4dd0e1;cursor:pointer;margin:0;">${escH(v)}</label>`).join('');
   return `<div style="margin-bottom:11px;">
     <div onclick="const b=document.getElementById('adv-eez-b');b.style.display=b.style.display==='none'?'':'none'" style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;margin-bottom:5px;padding-bottom:3px;border-bottom:1px solid #0d2a3a;">
       <span style="font-size:9px;font-weight:700;color:#41B9C3;letter-spacing:1px;text-transform:uppercase;">EEZ / Jurisdiction</span>
