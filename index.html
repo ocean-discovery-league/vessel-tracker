@@ -112,12 +112,17 @@
     <div class="subtitle">Live Tracking and Historical Analysis</div>
   </div>
 
-  <div class="sec-nav">
-    <div class="sec-nav-btn" style="color:#ff9800;" onclick="navTo('sec-falkor')"><i>Falkor (too)</i></div>
-    <div class="sec-nav-btn" style="color:#29b6f6;" onclick="navTo('sec-nautilus')">E/V <i>Nautilus</i></div>
-    <div class="sec-nav-btn" style="color:#4caf50;" onclick="navTo('sec-okeanos')"><i>Okeanos Explorer</i></div>
-    <div class="sec-nav-btn" style="color:#81e1e7;" onclick="navTo('sec-verify')">Verify Points</div>
-    <div class="sec-nav-btn" style="color:#FFB300;" onclick="navTo('sec-targets')">Goals in Progress</div>
+  <div style="position:sticky;top:0;z-index:20;flex-shrink:0;">
+    <div class="sec-nav" style="position:relative;">
+      <div class="sec-nav-btn" style="color:#ff9800;" onclick="navTo('sec-falkor')"><i>Falkor (too)</i></div>
+      <div class="sec-nav-btn" style="color:#29b6f6;" onclick="navTo('sec-nautilus')">E/V <i>Nautilus</i></div>
+      <div class="sec-nav-btn" style="color:#4caf50;" onclick="navTo('sec-okeanos')"><i>Okeanos Explorer</i></div>
+      <div class="sec-nav-btn" style="color:#81e1e7;" onclick="navTo('sec-verify')">Verify Points</div>
+      <div class="sec-nav-btn" style="color:#FFB300;" onclick="navTo('sec-targets')">Goals in Progress</div>
+    </div>
+    <div style="padding:6px 10px;background:#041828;border-bottom:1px solid #187D8B;">
+      <button onclick="openAdvancedSearch()" id="adv-search-btn" class="btn" style="margin-top:0;width:100%;background:#041820;border-color:#4dd0e1;color:#4dd0e1;display:flex;align-items:center;justify-content:center;gap:7px;"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>Advanced Search<span id="adv-active-badge" style="display:none;margin-left:6px;background:#4dd0e1;color:#041018;font-size:8px;font-weight:800;padding:2px 6px;border-radius:10px;letter-spacing:0.5px;">ACTIVE</span></button>
+    </div>
   </div>
 
   <div id="alert-box">
@@ -920,6 +925,7 @@ for (const [name, color, label] of [
   ['●', '#ff5252', 'Intersects land (12 zones)'],
   ['●', '#ffeb3b', 'Buffer extends into water <200m (7 zones)'],
   ['●', '#ff6d00', 'Overlaps another zone (24 zones)'],
+  ['●', '#ce93d8', 'Crosses multiple EEZs (59 zones)'],
 ]) {
   const el = document.createElement('div'); el.className='legend-item';
   el.innerHTML = `<span style="font-size:13px;color:${color};line-height:1;">${name}</span><span>${label}</span>`;
@@ -985,6 +991,8 @@ darkLayer.addTo(map);
 const canvasRenderer = L.canvas({ padding: 0.5 });
 // Zones with geometric issues flagged during preprocessing
 // Zones whose 5km buffer edge extends into water shallower than 200m (verified via GEBCO sampling)
+const ZONE_MULTI_EEZ = new Set(['South Pacific Ocean-PCN-3182','South Pacific Ocean-NFK-3830','South Pacific Ocean-TON-3921','South Pacific Ocean-COK-3943','South Pacific Ocean-AUS-4549','South Pacific Ocean-VUT-4593','South Pacific Ocean-TUV-4663','South Pacific Ocean-ASM-4679','Indian Ocean-SYC-5026','South Pacific Ocean-SLB-5277','South Atlantic Ocean-COG-5604','South Atlantic Ocean-AGO-5606','North Atlantic Ocean-NGA-6137','South China and Easter Archipelagic Seas-IDN-6304','North Pacific Ocean-FSM-6424','North Pacific Ocean-MHL-6435','North Atlantic Ocean-DOM-6662','North Atlantic Ocean-TTO-6675','North Atlantic Ocean-VEN-6680','North Atlantic Ocean-MTQ-6700','North Atlantic Ocean-GMB-6794','Indian Ocean-MMR-6961','South China and Easter Archipelagic Seas-PHL-6971','North Pacific Ocean-GUM-7061','North Atlantic Ocean-MEX-7396','North Atlantic Ocean-HND-7412','North Atlantic Ocean-MAF-7449','North Atlantic Ocean-VIR-7450','North Pacific Ocean-MNP-7758','Mediterranean Region-ESP-8660','Mediterranean Region-MLT-8666','Mediterranean Region-MLT-8678','Mediterranean Region-TUR-8710','North Pacific Ocean-JPN-8729','North Pacific Ocean-JPN-8750','North Atlantic Ocean-GBR-9238','North Atlantic Ocean-GBR-9239','North Atlantic Ocean-GBR-9240','North Pacific Ocean-USA-9267','North Atlantic Ocean-ISL-9355','Arctic Ocean-CAN-9468','Arctic Ocean-CAN-9472','Arctic Ocean-CAN-9535','Arctic Ocean-GRL-9539','Arctic Ocean-GRL-9573','Arctic Ocean-SJM-9583','Arctic Ocean-SJM-9586','Arctic Ocean-ISL-9587','Arctic Ocean-SJM-9595','Arctic Ocean-ISL-9596','Arctic Ocean-ISL-9597','Arctic Ocean-ISL-9599','Arctic Ocean-NOR-9629','Arctic Ocean-NOR-9652','Arctic Ocean-SJM-9660','Arctic Ocean-NOR-9663','Arctic Ocean-GRL-9838','Arctic Ocean-GRL-9846','Arctic Ocean-RUS-9878']);
+
 const ZONE_SHALLOW  = new Set(['South Pacific Ocean-PYF-4758','Indian Ocean-IDN-5211','Mediterranean Region-ITA-8672','Mediterranean Region-ITA-8690','Mediterranean Region-CYP-8709','Arctic Ocean-CAN-9518','Arctic Ocean-CAN-9815']);
 
 const ZONE_OVERLAPS = new Set(['Arctic Ocean-CAN-9805','Arctic Ocean-CAN-9811','Arctic Ocean-HS-9731','Arctic Ocean-HS-9732','Arctic Ocean-HS-9756','Arctic Ocean-HS-9757','Arctic Ocean-HS-9965','Arctic Ocean-HS-9969','Arctic Ocean-RUS-9906','Arctic Ocean-RUS-9908','Arctic Ocean-RUS-9917','Arctic Ocean-RUS-9918','Arctic Ocean-RUS-9931','Arctic Ocean-RUS-9932','Arctic Ocean-SJM-9857','Arctic Ocean-SJM-9858','Arctic Ocean-USA-9463','Arctic Ocean-USA-9467','Southern Ocean-ATA-122','Southern Ocean-ATA-123','Southern Ocean-ATA-75','Southern Ocean-ATA-80','Southern Ocean-HS-16','Southern Ocean-HS-5']);
@@ -1006,9 +1014,10 @@ function pacificLon(lon) { return lon > 0 ? lon - 360 : lon; }
 for (const [lon, lat, name, depth, geomorph, ocean, eez, mapped, observed, pointDepth, shoreM, seafloor] of ZONES) {
   let color = OCEAN_COLORS[ocean] || DEFAULT_COLOR;
   let weight = 1, fillOpacity = 0.15;
-  if (ZONE_LAND.has(name))           { color = '#ff5252'; weight = 2; fillOpacity = 0.3; }
-  else if (ZONE_SHALLOW.has(name))  { color = '#ffeb3b'; weight = 2; fillOpacity = 0.3; }
-  else if (ZONE_OVERLAPS.has(name)) { color = '#ff6d00'; weight = 2; fillOpacity = 0.3; }
+  if (ZONE_LAND.has(name))              { color = '#ff5252'; weight = 2; fillOpacity = 0.3; }
+  else if (ZONE_SHALLOW.has(name))     { color = '#ffeb3b'; weight = 2; fillOpacity = 0.3; }
+  else if (ZONE_OVERLAPS.has(name))    { color = '#ff6d00'; weight = 2; fillOpacity = 0.3; }
+  else if (ZONE_MULTI_EEZ.has(name))   { color = '#ce93d8'; weight = 2; fillOpacity = 0.3; }
   const circleOpts = {
     radius: 5000,
     renderer: canvasRenderer,
@@ -1166,6 +1175,8 @@ function buildZonePopupContent(z) {
     ? `<div style="margin-bottom:7px;padding:3px 7px;background:#1a1a00;border:1px solid #ffeb3b;border-radius:4px;font-size:10px;color:#ffeb3b;font-weight:700;">⚠ Zone flag: buffer extends into water &lt;200m</div>`
     : ZONE_OVERLAPS.has(z.name)
     ? `<div style="margin-bottom:7px;padding:3px 7px;background:#1a1000;border:1px solid #ff6d00;border-radius:4px;font-size:10px;color:#ff6d00;font-weight:700;">⚠ Zone flag: overlaps another zone</div>`
+    : ZONE_MULTI_EEZ.has(z.name)
+    ? `<div style="margin-bottom:7px;padding:3px 7px;background:#1a0a1a;border:1px solid #ce93d8;border-radius:4px;font-size:10px;color:#ce93d8;font-weight:700;">⚠ Zone flag: crosses multiple EEZs</div>`
     : '';
   return `<div style="min-width:220px;font-family:'Montserrat',sans-serif">
     <div style="font-size:13px;font-weight:700;margin-bottom:8px;color:#003">${z.name}</div>
@@ -3742,7 +3753,12 @@ async function toggleODLCleaned() {
     const m = L.circleMarker([lat, pacificLon(lon)], {
       radius: 3, color, fillColor: color, fillOpacity: 0.75, weight: 0.5, opacity: 0.9
     });
-    m._diveTypeName = typeName;
+    m._diveTypeName    = typeName;
+    m._diveYear        = year;
+    m._diveCountry     = country;
+    m._diveInstitution = institution;
+    m._diveSovereign   = sovereign;
+    m._diveDepth       = depth;
     m.on('click', e => {
       L.DomEvent.stopPropagation(e);
       odlCleanedPopup.setLatLng([lat, pacificLon(lon)]).setContent(`
@@ -3770,6 +3786,7 @@ async function toggleODLCleaned() {
   document.getElementById('legend-odl-cleaned-group').style.display = '';
   document.querySelectorAll('[data-odl-cleaned-legend]').forEach(el => el.style.display = '');
   document.getElementById('odl-cleaned-color-ctrl').style.display = 'flex';
+  if (advBuilt) buildDivesFilters();
 }
 
 // ── EEZ Filter ────────────────────────────────────────────────────────────────
@@ -4040,7 +4057,7 @@ function selectEEZ(name) {
 function clearEEZFilter() {
   activeEEZ = null;
   for (const z of zoneData) {
-    const flagged = ZONE_LAND.has(z.name) || ZONE_SHALLOW.has(z.name) || ZONE_OVERLAPS.has(z.name);
+    const flagged = ZONE_LAND.has(z.name) || ZONE_SHALLOW.has(z.name) || ZONE_OVERLAPS.has(z.name) || ZONE_MULTI_EEZ.has(z.name);
     zss(z, { opacity: 0.9, fillOpacity: flagged ? 0.3 : 0.15 });
   }
   const lbl = document.getElementById('eez-selected-label');
@@ -4057,7 +4074,7 @@ function exportEEZCSV() {
   const zones = eezIndex.get(activeEEZ) || [];
   const rows = ['Zone Name,EEZ,Ocean,Latitude,Longitude,Point Depth (m),Shore Distance (nm),Shore Distance (km),Seafloor Composition,Geomorphology,Depth Zone,Flag'];
   for (const z of zones) {
-    const flag = ZONE_LAND.has(z.name) ? 'Land' : ZONE_SHALLOW.has(z.name) ? 'Shallow' : ZONE_OVERLAPS.has(z.name) ? 'Overlapping' : '';
+    const flag = ZONE_LAND.has(z.name) ? 'Land' : ZONE_SHALLOW.has(z.name) ? 'Shallow' : ZONE_OVERLAPS.has(z.name) ? 'Overlapping' : ZONE_MULTI_EEZ.has(z.name) ? 'Multi-EEZ' : '';
     const lat = typeof z.lat !== 'undefined' ? z.lat : '';
     const lon = typeof z.lon !== 'undefined' ? z.lon : '';
     rows.push([z.name, activeEEZ, z.ocean || '', lat, lon,
@@ -4100,7 +4117,7 @@ function toggleOceanColors() {
   });
   // Recolor all zones — respect existing flags
   for (const z of zoneData) {
-    if (ZONE_LAND.has(z.name) || ZONE_SHALLOW.has(z.name) || ZONE_OVERLAPS.has(z.name)) continue;
+    if (ZONE_LAND.has(z.name) || ZONE_SHALLOW.has(z.name) || ZONE_OVERLAPS.has(z.name) || ZONE_MULTI_EEZ.has(z.name)) continue;
     const col = oceanColorsOn ? z.defaultColor : GREY_ZONE;
     zss(z, { color: col, fillColor: col });
   }
@@ -4778,6 +4795,423 @@ function runPointVerification() {
   }, 50);
 }
 
+
+// ── Advanced Search ──────────────────────────────────────────────────────────
+let advBuilt = false;
+let advDivesBuilt = false;
+let advResultsShowing = false;
+
+const ADV = {
+  gOceans: new Set(), gDepths: new Set(), gGeomorphs: new Set(),
+  gSeafloors: new Set(), gEezs: new Set(), gEezSearch: '',
+  gMapped: '', gObserved: '',
+  gPointDepthMin: '', gPointDepthMax: '',
+  gShoreNmMin: '',    gShoreNmMax: '',
+  gFlags: new Set(), gStatuses: new Set(),
+  dTypes: new Set(), dCountries: new Set(), dInstitutions: new Set(),
+  dYearMin: '', dYearMax: '', dDepthMin: '', dDepthMax: '',
+};
+
+function openAdvancedSearch() {
+  document.getElementById('adv-search-drawer').style.transform = 'translateX(0)';
+  if (!advBuilt) { buildAdvFilters(); advBuilt = true; }
+  applyAdvancedFilters();
+}
+
+function closeAdvancedSearch() {
+  document.getElementById('adv-search-drawer').style.transform = 'translateX(-324px)';
+}
+
+function setAdvTab(tab) {
+  document.getElementById('adv-goals-pane').style.display = tab === 'goals' ? '' : 'none';
+  document.getElementById('adv-dives-pane').style.display = tab === 'dives' ? '' : 'none';
+  ['goals','dives'].forEach(t => {
+    const btn = document.getElementById('adv-tab-' + t);
+    const active = t === tab;
+    btn.style.background         = active ? '#0E2446' : '#041018';
+    btn.style.borderBottomColor  = active ? '#4dd0e1' : 'transparent';
+    btn.style.color              = active ? '#4dd0e1' : '#8899bb';
+  });
+  if (tab === 'dives') ensureDivesFilters();
+}
+
+function advToggle(key, cb) {
+  if (cb.checked) ADV[key].add(cb.value);
+  else ADV[key].delete(cb.value);
+  applyAdvancedFilters();
+}
+
+function advRadio(key, value) {
+  ADV[key] = value;
+  applyAdvancedFilters();
+}
+
+function advRange(key, value) {
+  ADV[key] = value === '' ? '' : Number(value);
+  applyAdvancedFilters();
+}
+
+function advEezSearch(val) {
+  ADV.gEezSearch = val.toLowerCase();
+  document.querySelectorAll('#adv-eez-list label').forEach(el => {
+    el.style.display = el.textContent.toLowerCase().includes(ADV.gEezSearch) ? '' : 'none';
+  });
+}
+
+function isAdvGoalsActive() {
+  return ADV.gOceans.size || ADV.gDepths.size || ADV.gGeomorphs.size ||
+    ADV.gSeafloors.size || ADV.gEezs.size || ADV.gMapped || ADV.gObserved ||
+    ADV.gPointDepthMin !== '' || ADV.gPointDepthMax !== '' ||
+    ADV.gShoreNmMin !== '' || ADV.gShoreNmMax !== '' || ADV.gFlags.size;
+}
+
+function isAdvDivesActive() {
+  return ADV.dTypes.size || ADV.dCountries.size || ADV.dInstitutions.size ||
+    ADV.dYearMin !== '' || ADV.dYearMax !== '' || ADV.dDepthMin !== '' || ADV.dDepthMax !== '';
+}
+
+function zonePassesAdv(z) {
+  if (ADV.gOceans.size    && !ADV.gOceans.has(z.ocean))      return false;
+  if (ADV.gDepths.size    && !ADV.gDepths.has(z.depth))      return false;
+  if (ADV.gGeomorphs.size && !ADV.gGeomorphs.has(z.geomorph)) return false;
+  if (ADV.gSeafloors.size && !ADV.gSeafloors.has(z.seafloor)) return false;
+  if (ADV.gEezs.size      && !ADV.gEezs.has(z.eez))          return false;
+  if (ADV.gMapped   && z.mapped   !== ADV.gMapped)   return false;
+  if (ADV.gObserved && z.observed !== ADV.gObserved) return false;
+  const d = Math.abs(z.pointDepth || 0);
+  if (ADV.gPointDepthMin !== '' && d < Number(ADV.gPointDepthMin)) return false;
+  if (ADV.gPointDepthMax !== '' && d > Number(ADV.gPointDepthMax)) return false;
+  const nm = (z.shoreM || 0) / 1852;
+  if (ADV.gShoreNmMin !== '' && nm < Number(ADV.gShoreNmMin)) return false;
+  if (ADV.gShoreNmMax !== '' && nm > Number(ADV.gShoreNmMax)) return false;
+  if (ADV.gStatuses.size) {
+    const status = (explorationTargets[z.name]?.status) || 'none';
+    if (!ADV.gStatuses.has(status)) return false;
+  }
+  if (ADV.gFlags.size) {
+    const f = ADV.gFlags;
+    const iL = ZONE_LAND.has(z.name), iS = ZONE_SHALLOW.has(z.name);
+    const iO = ZONE_OVERLAPS.has(z.name), iM = ZONE_MULTI_EEZ.has(z.name);
+    const any = (f.has('land')&&iL)||(f.has('shallow')&&iS)||(f.has('overlaps')&&iO)||
+                (f.has('multieez')&&iM)||(f.has('none')&&!iL&&!iS&&!iO&&!iM);
+    if (!any) return false;
+  }
+  return true;
+}
+
+function divePassesAdv(m) {
+  if (ADV.dTypes.size        && !ADV.dTypes.has(m._diveTypeName))         return false;
+  if (ADV.dCountries.size    && !ADV.dCountries.has(m._diveCountry))      return false;
+  if (ADV.dInstitutions.size && !ADV.dInstitutions.has(m._diveInstitution)) return false;
+  if (ADV.dYearMin !== '' && (m._diveYear||0) < Number(ADV.dYearMin)) return false;
+  if (ADV.dYearMax !== '' && (m._diveYear||0) > Number(ADV.dYearMax)) return false;
+  const d = Math.abs(m._diveDepth||0);
+  if (ADV.dDepthMin !== '' && d < Number(ADV.dDepthMin)) return false;
+  if (ADV.dDepthMax !== '' && d > Number(ADV.dDepthMax)) return false;
+  return true;
+}
+
+function applyAdvancedFilters() {
+  const goalsOn = isAdvGoalsActive();
+  const divesOn = isAdvDivesActive();
+  let zoneMatch = 0, diveMatch = 0;
+
+  for (const z of zoneData) {
+    const pass = !goalsOn || zonePassesAdv(z);
+    z.circle.setStyle({ opacity: pass ? 0.9 : 0.06, fillOpacity: pass ? 0.7 : 0.04 });
+    if (z.circleW) z.circleW.setStyle({ opacity: pass ? 0.4 : 0.02 });
+    if (pass) zoneMatch++;
+  }
+
+  if (odlCleanedLayer) {
+    odlCleanedLayer.getLayers().forEach(m => {
+      const pass = !divesOn || divePassesAdv(m);
+      m.setStyle({ opacity: pass ? 0.9 : 0.06, fillOpacity: pass ? 0.75 : 0.04 });
+      if (pass) diveMatch++;
+    });
+  }
+
+  const anyActive = goalsOn || divesOn;
+  document.getElementById('adv-active-badge').style.display = anyActive ? '' : 'none';
+
+  const parts = [];
+  if (goalsOn) parts.push(zoneMatch.toLocaleString() + ' zones');
+  if (divesOn && odlCleanedLayer) parts.push(diveMatch.toLocaleString() + ' dives');
+  document.getElementById('adv-count-badge').textContent = parts.join(' · ');
+
+  if (advResultsShowing) renderAdvResults();
+}
+
+function clearAdvancedFilters() {
+  ['gOceans','gDepths','gGeomorphs','gSeafloors','gEezs','gFlags','gStatuses',
+   'dTypes','dCountries','dInstitutions'].forEach(k => ADV[k].clear());
+  ['gMapped','gObserved','gEezSearch','gPointDepthMin','gPointDepthMax',
+   'gShoreNmMin','gShoreNmMax','dYearMin','dYearMax','dDepthMin','dDepthMax'].forEach(k => ADV[k]='');
+  document.querySelectorAll('#adv-search-drawer input[type=checkbox]').forEach(cb => cb.checked = false);
+  document.querySelectorAll('#adv-search-drawer input[type=radio]').forEach(rb => { if (rb.value==='') rb.checked = true; });
+  document.querySelectorAll('#adv-search-drawer input[type=number]').forEach(n => n.value = '');
+  const es = document.getElementById('adv-eez-search');
+  if (es) { es.value = ''; advEezSearch(''); }
+  applyAdvancedFilters();
+}
+
+function toggleAdvResults() {
+  advResultsShowing = !advResultsShowing;
+  document.getElementById('adv-results-list').style.display = advResultsShowing ? '' : 'none';
+  document.getElementById('adv-results-toggle-btn').textContent = advResultsShowing ? 'Hide List' : 'Show List';
+  if (advResultsShowing) renderAdvResults();
+}
+
+function escH(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function renderAdvResults() {
+  const el = document.getElementById('adv-results-items');
+  const tabGoals = document.getElementById('adv-goals-pane').style.display !== 'none';
+  const goalsOn = isAdvGoalsActive();
+  const divesOn = isAdvDivesActive();
+  let html = '';
+
+  if (tabGoals) {
+    const matches = goalsOn ? zoneData.filter(zonePassesAdv) : zoneData;
+    document.getElementById('adv-results-note').textContent = `(first 200 of ${matches.length.toLocaleString()})`;
+    html = matches.slice(0,200).map(z => {
+      const flag = ZONE_LAND.has(z.name)?'🔴':ZONE_SHALLOW.has(z.name)?'🟡':ZONE_OVERLAPS.has(z.name)?'🟠':ZONE_MULTI_EEZ.has(z.name)?'🟣':'';
+      return `<div onclick="closeAdvancedSearch();setTimeout(()=>map.setView([${z.lat},${z.lon}],9),300)"
+        style="padding:4px 6px;border-bottom:1px solid #0c2030;cursor:pointer;border-radius:2px;"
+        onmouseover="this.style.background='#0E2446'" onmouseout="this.style.background=''">
+        <span style="color:#81e1e7;font-size:9px;font-weight:600;">${flag}${escH(z.name)}</span>
+        <span style="float:right;color:#8899bb;font-size:8px;">${escH(z.depth)}</span>
+        <div style="color:#4a6070;font-size:8px;clear:right;">${escH(z.ocean)} · ${escH(z.geomorph)}</div>
+      </div>`;
+    }).join('');
+  } else {
+    if (!odlCleanedLayer) {
+      html = '<div style="font-size:9px;color:#8899bb;padding:10px 0;text-align:center;">Load the Historic Dives (Cleaned) layer first.</div>';
+    } else {
+      const ms = odlCleanedLayer.getLayers();
+      const matches = divesOn ? ms.filter(divePassesAdv) : ms;
+      document.getElementById('adv-results-note').textContent = `(first 200 of ${matches.length.toLocaleString()})`;
+      html = matches.slice(0,200).map(m => {
+        const ll = m.getLatLng();
+        return `<div onclick="closeAdvancedSearch();setTimeout(()=>map.setView([${ll.lat},${ll.lng}],10),300)"
+          style="padding:4px 6px;border-bottom:1px solid #0c2030;cursor:pointer;border-radius:2px;"
+          onmouseover="this.style.background='#0E2446'" onmouseout="this.style.background=''">
+          <span style="color:#81d4fa;font-size:9px;font-weight:600;">${escH(m._diveTypeName||'—')} — ${m._diveYear||'—'}</span>
+          <span style="float:right;color:#8899bb;font-size:8px;">${m._diveDepth?Math.abs(m._diveDepth)+'m':'—'}</span>
+          <div style="color:#4a6070;font-size:8px;clear:right;">${escH(m._diveCountry||'—')} · ${escH(m._diveInstitution||'—')}</div>
+        </div>`;
+      }).join('');
+    }
+  }
+  el.innerHTML = html || '<div style="font-size:9px;color:#8899bb;padding:10px 0;text-align:center;">No matches</div>';
+}
+
+function exportAdvancedCSV() {
+  const goalsOn = isAdvGoalsActive();
+  const matches = goalsOn ? zoneData.filter(zonePassesAdv) : zoneData;
+  const rows = [['Name','Ocean','EEZ','Depth Zone','Geomorphology','Seafloor','Mapped','Observed','Point Depth (m)','Shore Distance (nm)','Lat','Lon']];
+  matches.forEach(z => rows.push([z.name,z.ocean,z.eez,z.depth,z.geomorph,z.seafloor,z.mapped,z.observed,z.pointDepth,((z.shoreM||0)/1852).toFixed(2),z.lat,z.lon]));
+  const csv = rows.map(r => r.map(v => `"${String(v||'').replace(/"/g,'""')}"`).join(',')).join('\n');
+  const a = document.createElement('a'); a.href = 'data:text/csv;charset=utf-8,'+encodeURIComponent(csv);
+  a.download = 'advanced_search_results.csv'; a.click();
+}
+
+function makeFilterGroup(id, label, values, key, colorMap) {
+  const pills = values.map(v => {
+    const col = (colorMap && colorMap[v]) || '#4dd0e1';
+    return `<label style="display:inline-flex;align-items:center;gap:3px;margin:2px;padding:3px 7px;border:1px solid #187D8B;border-radius:12px;cursor:pointer;font-size:9px;color:#81e1e7;background:#041018;white-space:nowrap;user-select:none;">
+      <input type="checkbox" value="${escH(v)}" onchange="advToggle('${key}',this)" style="width:10px;height:10px;accent-color:${col};cursor:pointer;flex-shrink:0;">${escH(v)}
+    </label>`;
+  }).join('');
+  return `<div style="margin-bottom:11px;">
+    <div onclick="const b=document.getElementById('${id}-b');b.style.display=b.style.display==='none'?'':'none'" style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;margin-bottom:5px;padding-bottom:3px;border-bottom:1px solid #0d2a3a;">
+      <span style="font-size:9px;font-weight:700;color:#41B9C3;letter-spacing:1px;text-transform:uppercase;">${label}</span>
+      <span style="font-size:10px;color:#41B9C3;line-height:1;">▾</span>
+    </div>
+    <div id="${id}-b" style="display:flex;flex-wrap:wrap;gap:1px;">${pills}</div>
+  </div>`;
+}
+
+function makeEEZGroup(eezs) {
+  const items = eezs.map(v => `<label style="display:flex;align-items:center;gap:5px;padding:3px 6px;cursor:pointer;font-size:9px;color:#81e1e7;overflow:hidden;" title="${escH(v)}">
+    <input type="checkbox" value="${escH(v)}" onchange="advToggle('gEezs',this)" style="flex-shrink:0;width:10px;height:10px;accent-color:#4dd0e1;cursor:pointer;">
+    <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escH(v)}</span>
+  </label>`).join('');
+  return `<div style="margin-bottom:11px;">
+    <div onclick="const b=document.getElementById('adv-eez-b');b.style.display=b.style.display==='none'?'':'none'" style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;margin-bottom:5px;padding-bottom:3px;border-bottom:1px solid #0d2a3a;">
+      <span style="font-size:9px;font-weight:700;color:#41B9C3;letter-spacing:1px;text-transform:uppercase;">EEZ / Jurisdiction</span>
+      <span style="font-size:10px;color:#41B9C3;line-height:1;">▾</span>
+    </div>
+    <div id="adv-eez-b">
+      <input id="adv-eez-search" type="text" placeholder="Search EEZs..." oninput="advEezSearch(this.value)"
+        style="width:100%;padding:5px 8px;background:#041018;border:1px solid #187D8B;border-radius:4px;color:#81e1e7;font-family:'Montserrat',sans-serif;font-size:9px;margin-bottom:4px;box-sizing:border-box;" autocomplete="off">
+      <div id="adv-eez-list" style="max-height:150px;overflow-y:auto;border:1px solid #0d2a3a;border-radius:4px;background:#041018;">${items}</div>
+    </div>
+  </div>`;
+}
+
+function makeMappedGroup() {
+  const makeRow = (key, label) => `<div style="margin-bottom:6px;">
+    <div style="font-size:8px;font-weight:600;color:#556677;letter-spacing:0.5px;text-transform:uppercase;margin-bottom:3px;">${label}</div>
+    <div style="display:flex;gap:4px;">
+      ${[['','Any'],['Y','Yes'],['N','No']].map(([v,l]) => `<label style="display:inline-flex;align-items:center;gap:3px;padding:3px 8px;border:1px solid #187D8B;border-radius:10px;cursor:pointer;font-size:9px;color:#81e1e7;background:#041018;user-select:none;">
+        <input type="radio" name="${key}" value="${v}" ${v===''?'checked':''} onchange="advRadio('${key}','${v}')" style="width:9px;height:9px;accent-color:#4dd0e1;cursor:pointer;">${l}
+      </label>`).join('')}
+    </div>
+  </div>`;
+  return `<div style="margin-bottom:11px;">
+    <div onclick="const b=document.getElementById('adv-mapped-b');b.style.display=b.style.display==='none'?'':'none'" style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;margin-bottom:5px;padding-bottom:3px;border-bottom:1px solid #0d2a3a;">
+      <span style="font-size:9px;font-weight:700;color:#41B9C3;letter-spacing:1px;text-transform:uppercase;">Mapped / Observed</span>
+      <span style="font-size:10px;color:#41B9C3;line-height:1;">▾</span>
+    </div>
+    <div id="adv-mapped-b">${makeRow('gMapped','Seafloor Mapped')}${makeRow('gObserved','Previously Observed')}</div>
+  </div>`;
+}
+
+function makeRangeGroup(label, minKey, maxKey, minPh, maxPh, unit) {
+  return `<div style="margin-bottom:11px;">
+    <div onclick="const b=document.getElementById('adv-rng-${minKey}-b');b.style.display=b.style.display==='none'?'':'none'" style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;margin-bottom:5px;padding-bottom:3px;border-bottom:1px solid #0d2a3a;">
+      <span style="font-size:9px;font-weight:700;color:#41B9C3;letter-spacing:1px;text-transform:uppercase;">${label}</span>
+      <span style="font-size:10px;color:#41B9C3;line-height:1;">▾</span>
+    </div>
+    <div id="adv-rng-${minKey}-b" style="display:flex;gap:6px;align-items:center;">
+      <input type="number" placeholder="${minPh}" oninput="advRange('${minKey}',this.value)"
+        style="flex:1;padding:5px;background:#041018;border:1px solid #187D8B;border-radius:4px;color:#81e1e7;font-family:'Montserrat',sans-serif;font-size:9px;" autocomplete="off">
+      <span style="color:#4a6070;font-size:9px;">–</span>
+      <input type="number" placeholder="${maxPh}" oninput="advRange('${maxKey}',this.value)"
+        style="flex:1;padding:5px;background:#041018;border:1px solid #187D8B;border-radius:4px;color:#81e1e7;font-family:'Montserrat',sans-serif;font-size:9px;" autocomplete="off">
+      ${unit ? `<span style="color:#4a6070;font-size:8px;white-space:nowrap;">${unit}</span>` : ''}
+    </div>
+  </div>`;
+}
+
+function makeFlagsGroup() {
+  const flags = [['none','#8899bb','No flags'],['land','#f44336','Near land'],['shallow','#ffd600','Shallow'],['overlaps','#ff9800','EEZ overlap'],['multieez','#ce93d8','Multi-EEZ']];
+  const pills = flags.map(([val,col,lbl]) => `<label style="display:inline-flex;align-items:center;gap:3px;margin:2px;padding:3px 7px;border:1px solid ${col}55;border-radius:12px;cursor:pointer;font-size:9px;color:${col};background:#041018;white-space:nowrap;user-select:none;">
+    <input type="checkbox" value="${val}" onchange="advToggle('gFlags',this)" style="width:10px;height:10px;accent-color:${col};cursor:pointer;flex-shrink:0;">${lbl}
+  </label>`).join('');
+  return `<div style="margin-bottom:11px;">
+    <div onclick="const b=document.getElementById('adv-flags-b');b.style.display=b.style.display==='none'?'':'none'" style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;margin-bottom:5px;padding-bottom:3px;border-bottom:1px solid #0d2a3a;">
+      <span style="font-size:9px;font-weight:700;color:#41B9C3;letter-spacing:1px;text-transform:uppercase;">Zone Flags</span>
+      <span style="font-size:10px;color:#41B9C3;line-height:1;">▾</span>
+    </div>
+    <div id="adv-flags-b" style="display:flex;flex-wrap:wrap;gap:1px;">${pills}</div>
+  </div>`;
+}
+
+function buildAdvFilters() {
+  const oceans    = [...new Set(zoneData.map(z => z.ocean))].filter(Boolean).sort();
+  const depths    = [...new Set(zoneData.map(z => z.depth))].filter(Boolean).sort((a,b) => (parseInt(a)||0)-(parseInt(b)||0));
+  const geomorphs = [...new Set(zoneData.map(z => z.geomorph))].filter(Boolean).sort();
+  const seafloors = [...new Set(zoneData.map(z => z.seafloor))].filter(Boolean).sort();
+  const eezs      = [...new Set(zoneData.map(z => z.eez))].filter(Boolean).sort();
+
+  const statusPills = [
+    ['none','#8899bb','Not Targeted'],
+    ['targeted','#FFB300','Targeted'],
+    ['needinvestigation','#ff9800','Need Investigation'],
+    ['underconsideration','#29b6f6','Under Consideration'],
+    ['complete','#66bb6a','Reported Complete'],
+    ['verified','#ce93d8','Verified'],
+  ].map(([val,col,lbl]) => `<label style="display:inline-flex;align-items:center;gap:3px;margin:2px;padding:3px 7px;border:1px solid ${col}55;border-radius:12px;cursor:pointer;font-size:9px;color:${col};background:#041018;white-space:nowrap;user-select:none;">
+    <input type="checkbox" value="${val}" onchange="advToggle('gStatuses',this)" style="width:10px;height:10px;accent-color:${col};cursor:pointer;flex-shrink:0;">${lbl}
+  </label>`).join('');
+  const statusGroup = `<div style="margin-bottom:11px;">
+    <div onclick="const b=document.getElementById('adv-status-b');b.style.display=b.style.display==='none'?'':'none'" style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;margin-bottom:5px;padding-bottom:3px;border-bottom:1px solid #0d2a3a;">
+      <span style="font-size:9px;font-weight:700;color:#41B9C3;letter-spacing:1px;text-transform:uppercase;">Goal Status</span>
+      <span style="font-size:10px;color:#41B9C3;line-height:1;">▾</span>
+    </div>
+    <div id="adv-status-b" style="display:flex;flex-wrap:wrap;gap:1px;">${statusPills}</div>
+  </div>`;
+
+  document.getElementById('adv-goals-pane').innerHTML =
+    statusGroup +
+    makeFilterGroup('adv-g-ocean',   'Ocean Basin',          oceans,    'gOceans',    null) +
+    makeFilterGroup('adv-g-depth',   'Depth Zone',           depths,    'gDepths',    null) +
+    makeFilterGroup('adv-g-geomorph','Geomorphology',        geomorphs, 'gGeomorphs', null) +
+    makeFilterGroup('adv-g-seafloor','Seafloor Composition', seafloors, 'gSeafloors', null) +
+    makeEEZGroup(eezs) +
+    makeMappedGroup() +
+    makeRangeGroup('Point Depth', 'gPointDepthMin', 'gPointDepthMax', 'Min (m)', 'Max (m)', 'm') +
+    makeRangeGroup('Shore Distance', 'gShoreNmMin', 'gShoreNmMax', 'Min (nm)', 'Max (nm)', 'nm') +
+    makeFlagsGroup();
+
+  ensureDivesFilters();
+}
+
+function ensureDivesFilters() {
+  if (advDivesBuilt) return;
+  if (!odlCleanedData) {
+    document.getElementById('adv-dives-pane').innerHTML = `<div style="padding:24px 0;text-align:center;">
+      <div style="font-size:10px;color:#8899bb;margin-bottom:12px;line-height:1.6;">Enable the Historic Dives (Cleaned)<br>map layer to access these filters.</div>
+      <button onclick="toggleODLCleaned()" style="padding:7px 14px;background:#041820;border:1px solid #81d4fa;border-radius:5px;color:#81d4fa;font-family:'Montserrat',sans-serif;font-size:10px;font-weight:600;cursor:pointer;">Load Layer</button>
+    </div>`;
+    return;
+  }
+  buildDivesFilters();
+}
+
+function buildDivesFilters() {
+  if (advDivesBuilt || !odlCleanedData) return;
+  advDivesBuilt = true;
+  const { types, countries, institutions, dives } = odlCleanedData;
+  const typeColors = { ROV:'#29b6f6', HOV:'#66bb6a', AUV:'#ce93d8', Lander:'#ffa726', 'Camera Tow':'#fff176' };
+  const years = [...new Set(dives.map(d => d[3]).filter(Boolean))].sort();
+  const minY = years[0]||'', maxY = years[years.length-1]||'';
+
+  document.getElementById('adv-dives-pane').innerHTML =
+    makeFilterGroup('adv-d-type',    'Dive Type',   [...types].sort(),        'dTypes',        typeColors) +
+    makeFilterGroup('adv-d-country', 'Country',     [...countries].sort(),    'dCountries',    null) +
+    makeFilterGroup('adv-d-inst',    'Institution', [...institutions].sort(), 'dInstitutions', null) +
+    makeRangeGroup(`Year (${minY}–${maxY})`, 'dYearMin', 'dYearMax', minY, maxY, '') +
+    makeRangeGroup('Dive Depth', 'dDepthMin', 'dDepthMax', 'Min (m)', 'Max (m)', 'm');
+}
+
 </script>
+
+<!-- ══ Advanced Search Drawer ══════════════════════════════════════════════ -->
+<div id="adv-search-drawer" style="position:fixed;left:0;top:0;width:322px;height:100vh;z-index:2500;background:#07111E;border-right:2px solid #4dd0e1;display:flex;flex-direction:column;transform:translateX(-324px);transition:transform 0.28s cubic-bezier(0.4,0,0.2,1);overflow:hidden;font-family:'Montserrat',sans-serif;box-shadow:4px 0 30px rgba(0,0,0,0.8);">
+
+  <!-- Header -->
+  <div style="background:linear-gradient(160deg,#0E2446 0%,#004D64 100%);padding:13px 16px 11px;border-bottom:1px solid #4dd0e1;flex-shrink:0;display:flex;align-items:center;gap:8px;">
+    <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#4dd0e1" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
+    <span style="font-size:13px;font-weight:800;color:#4dd0e1;letter-spacing:0.5px;flex:1;">Advanced Search</span>
+    <span id="adv-count-badge" style="font-size:10px;color:#81e1e7;font-weight:600;"></span>
+    <button onclick="closeAdvancedSearch()" style="background:none;border:none;color:#81e1e7;cursor:pointer;font-size:18px;padding:0 2px;line-height:1;opacity:0.8;">✕</button>
+  </div>
+
+  <!-- Tabs -->
+  <div style="display:flex;flex-shrink:0;background:#041018;">
+    <button id="adv-tab-goals" onclick="setAdvTab('goals')" style="flex:1;padding:8px 6px;background:#0E2446;border:none;border-bottom:2px solid #4dd0e1;color:#4dd0e1;font-family:'Montserrat',sans-serif;font-size:10px;font-weight:700;cursor:pointer;letter-spacing:0.3px;">Exploration Goals</button>
+    <button id="adv-tab-dives" onclick="setAdvTab('dives')" style="flex:1;padding:8px 6px;background:#041018;border:none;border-bottom:2px solid transparent;color:#8899bb;font-family:'Montserrat',sans-serif;font-size:10px;font-weight:700;cursor:pointer;letter-spacing:0.3px;">Historic Dives (Cleaned)</button>
+  </div>
+
+  <!-- Scrollable filters -->
+  <div id="adv-scroll" style="flex:1;overflow-y:auto;padding:10px 12px 6px;">
+    <div id="adv-goals-pane">
+      <div style="font-size:10px;color:#8899bb;padding:20px 0;text-align:center;">Loading…</div>
+    </div>
+    <div id="adv-dives-pane" style="display:none;">
+      <div style="font-size:10px;color:#8899bb;padding:20px 0;text-align:center;">Loading…</div>
+    </div>
+    <!-- Results list -->
+    <div id="adv-results-list" style="display:none;margin-top:8px;border-top:1px solid #187D8B;padding-top:8px;">
+      <div style="font-size:9px;font-weight:700;color:#41B9C3;letter-spacing:1px;text-transform:uppercase;margin-bottom:5px;">
+        Matching Results <span id="adv-results-note" style="font-weight:400;color:#8899bb;"></span>
+      </div>
+      <div id="adv-results-items" style="max-height:280px;overflow-y:auto;"></div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <div style="flex-shrink:0;padding:8px 12px;border-top:1px solid #187D8B;background:#041018;display:flex;gap:6px;align-items:center;">
+    <button onclick="clearAdvancedFilters()" style="flex:1;padding:7px 8px;background:#041820;border:1px solid #187D8B;border-radius:5px;color:#8899bb;font-family:'Montserrat',sans-serif;font-size:10px;font-weight:600;cursor:pointer;">Clear All</button>
+    <button id="adv-results-toggle-btn" onclick="toggleAdvResults()" style="flex:1;padding:7px 8px;background:#041820;border:1px solid #4dd0e1;border-radius:5px;color:#4dd0e1;font-family:'Montserrat',sans-serif;font-size:10px;font-weight:600;cursor:pointer;">Show List</button>
+    <button onclick="exportAdvancedCSV()" title="Export filtered results as CSV" style="flex:0 0 auto;padding:7px 10px;background:#041820;border:1px solid #187D8B;border-radius:5px;color:#41B9C3;font-family:'Montserrat',sans-serif;font-size:10px;font-weight:600;cursor:pointer;">↓ CSV</button>
+  </div>
+</div>
+
 </body>
 </html>
