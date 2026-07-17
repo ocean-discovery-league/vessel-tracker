@@ -1051,7 +1051,7 @@ for (const [lon, lat, name, depth, geomorph, ocean, eez, mapped, observed, point
   // Western copy: for eastern-hemisphere zones (lon > 0) render a duplicate at lon-360
   // so they appear seamlessly in a Pacific-centred view without cutting the ocean in half.
   const circleW = lon > 0 ? L.circle([lat, lon - 360], circleOpts).addTo(map) : null;
-  zoneData.push({ lon, lat, name, depth, geomorph, ocean, eez, mapped, observed, pointDepth, shoreM, seafloor, circle, circleW, defaultColor: color });
+  zoneData.push({ lon, lat, name, depth, geomorph, ocean, eez, mapped, observed, pointDepth, shoreM, seafloor, circle, circleW, defaultColor: color, defaultFillOpacity: fillOpacity });
 }
 
 // Fast zone lookup by name for jump links
@@ -5014,10 +5014,16 @@ function applyAdvancedFilters() {
   let zoneMatch = 0, diveMatch = 0;
 
   for (const z of zoneData) {
-    const pass = !goalsOn || zonePassesAdv(z);
-    z.circle.setStyle({ opacity: pass ? 0.9 : 0.06, fillOpacity: pass ? 0.7 : 0.04 });
-    if (z.circleW) z.circleW.setStyle({ opacity: pass ? 0.4 : 0.02 });
-    if (pass) zoneMatch++;
+    if (!goalsOn) {
+      z.circle.setStyle({ opacity: 0.9, fillOpacity: z.defaultFillOpacity });
+      if (z.circleW) z.circleW.setStyle({ opacity: 0.9, fillOpacity: z.defaultFillOpacity });
+      zoneMatch++;
+    } else {
+      const pass = zonePassesAdv(z);
+      z.circle.setStyle({ opacity: pass ? 0.9 : 0.06, fillOpacity: pass ? 0.7 : 0.04 });
+      if (z.circleW) z.circleW.setStyle({ opacity: pass ? 0.9 : 0.02, fillOpacity: pass ? 0.7 : 0.04 });
+      if (pass) zoneMatch++;
+    }
   }
 
   if (odlCleanedLayer) {
