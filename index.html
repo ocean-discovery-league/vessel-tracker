@@ -121,7 +121,10 @@
       <div class="sec-nav-btn" style="color:#FFB300;" onclick="navTo('sec-targets')">Goals in Progress</div>
     </div>
     <div style="padding:6px 10px;background:#041828;border-bottom:1px solid #187D8B;">
-      <button onclick="openAdvancedSearch()" id="adv-search-btn" class="btn" style="margin-top:0;width:100%;background:#041820;border-color:#4dd0e1;color:#4dd0e1;display:flex;align-items:center;justify-content:center;gap:7px;"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>Advanced Search<span id="adv-active-badge" style="display:none;margin-left:6px;background:#4dd0e1;color:#041018;font-size:8px;font-weight:800;padding:2px 6px;border-radius:10px;letter-spacing:0.5px;">ACTIVE</span></button>
+      <div style="display:flex;gap:5px;align-items:center;">
+        <button onclick="openAdvancedSearch()" id="adv-search-btn" class="btn" style="margin-top:0;flex:1;background:#041820;border-color:#4dd0e1;color:#4dd0e1;display:flex;align-items:center;justify-content:center;gap:7px;"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>Advanced Search<span id="adv-active-badge" style="display:none;margin-left:6px;background:#4dd0e1;color:#041018;font-size:8px;font-weight:800;padding:2px 6px;border-radius:10px;letter-spacing:0.5px;">ACTIVE</span></button>
+        <button id="adv-clear-btn" onclick="clearAdvancedFilters()" title="Clear all filters" style="display:none;margin-top:0;padding:6px 9px;background:#041820;border:1px solid #4dd0e1;border-radius:5px;color:#4dd0e1;font-size:13px;line-height:1;cursor:pointer;flex-shrink:0;">✕</button>
+      </div>
     </div>
   </div>
 
@@ -5027,6 +5030,7 @@ function applyAdvancedFilters() {
 
   const anyActive = goalsOn || divesOn;
   document.getElementById('adv-active-badge').style.display = anyActive ? '' : 'none';
+  document.getElementById('adv-clear-btn').style.display    = anyActive ? '' : 'none';
 
   const parts = [];
   if (goalsOn) parts.push(zoneMatch.toLocaleString() + ' zones');
