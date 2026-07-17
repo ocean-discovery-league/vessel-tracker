@@ -670,7 +670,7 @@
 <script src="https://cdn.jsdelivr.net/npm/leaflet-velocity@2.1.1/dist/leaflet-velocity.min.js"></script>
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-  import { getFirestore, collection, doc, onSnapshot, setDoc, deleteDoc, updateDoc, arrayUnion, arrayRemove } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+  import { getFirestore, collection, doc, onSnapshot, setDoc, deleteDoc, updateDoc, arrayUnion, arrayRemove, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
   import { getStorage, ref, uploadBytesResumable, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js";
 
   const firebaseConfig = {
@@ -686,6 +686,22 @@
   const db = getFirestore(fbApp);
   const storage = getStorage(fbApp);
   const goalsCol = collection(db, 'explorationGoals');
+  const savedSearchesCol = collection(db, 'savedSearches');
+
+  // Live-sync saved searches into global array
+  window._savedSearches = [];
+  onSnapshot(savedSearchesCol, snap => {
+    window._savedSearches = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+      .sort((a, b) => (a.createdAt?.seconds || 0) - (b.createdAt?.seconds || 0));
+    if (typeof renderSavedSearches === 'function') renderSavedSearches();
+  });
+
+  window._fbSaveSearch = async (name, advState) => {
+    await addDoc(savedSearchesCol, { name, adv: advState, createdAt: serverTimestamp() });
+  };
+  window._fbDeleteSearch = async (id) => {
+    await deleteDoc(doc(savedSearchesCol, id));
+  };
 
   // Expose Firestore helpers to global scope for the rest of the app
   window._fbSaveGoal = async (zoneName, data) => {
@@ -926,6 +942,7 @@ for (const [name, color, label] of [
   ['●', '#ffeb3b', 'Buffer extends into water <200m (7 zones)'],
   ['●', '#ff6d00', 'Overlaps another zone (24 zones)'],
   ['●', '#ce93d8', 'Crosses multiple EEZs (59 zones)'],
+  ['●', '#26c6da', 'Crosses EEZ / High Seas boundary (100 zones)'],
 ]) {
   const el = document.createElement('div'); el.className='legend-item';
   el.innerHTML = `<span style="font-size:13px;color:${color};line-height:1;">${name}</span><span>${label}</span>`;
@@ -991,6 +1008,9 @@ darkLayer.addTo(map);
 const canvasRenderer = L.canvas({ padding: 0.5 });
 // Zones with geometric issues flagged during preprocessing
 // Zones whose 5km buffer edge extends into water shallower than 200m (verified via GEBCO sampling)
+const ZONE_EEZ_HS_POINT = {"Arctic Ocean-CAN-9768":"Canadian Exclusive Economic Zone","Arctic Ocean-CAN-9769":"Canadian Exclusive Economic Zone","Arctic Ocean-CAN-9780":"Canadian Exclusive Economic Zone","Arctic Ocean-CAN-9794":"Canadian Exclusive Economic Zone","Arctic Ocean-HS-9407":"High Seas","Arctic Ocean-HS-9608":"High Seas","Arctic Ocean-HS-9616":"High Seas","Arctic Ocean-HS-9674":"High Seas","Arctic Ocean-HS-9685":"High Seas","Arctic Ocean-HS-9687":"High Seas","Arctic Ocean-HS-9787":"High Seas","Arctic Ocean-HS-9792":"High Seas","Arctic Ocean-HS-9939":"High Seas","Arctic Ocean-HS-9940":"High Seas","Arctic Ocean-HS-9956":"High Seas","Arctic Ocean-RUS-9681":"Russian Exclusive Economic Zone","Arctic Ocean-RUS-9953":"Russian Exclusive Economic Zone","Arctic Ocean-RUS-9959":"Russian Exclusive Economic Zone","Arctic Ocean-RUS-9976":"Russian Exclusive Economic Zone","Arctic Ocean-RUS-9982":"Russian Exclusive Economic Zone","Arctic Ocean-RUS-9983":"Russian Exclusive Economic Zone","Arctic Ocean-SJM-9383":"Norwegian Exclusive Economic Zone (Jan Mayen)","Arctic Ocean-SJM-9621":"Norwegian Exclusive Economic Zone (Svalbard)","Arctic Ocean-SJM-9671":"Norwegian Exclusive Economic Zone (Svalbard)","Indian Ocean-AUS-2943":"Australian Exclusive Economic Zone","Indian Ocean-AUS-4485":"Australian Exclusive Economic Zone","Indian Ocean-HMD-2334":"Australian Exclusive Economic Zone (Heard and McDonald Islands)","Indian Ocean-HS-1668":"High Seas","Indian Ocean-HS-2280":"High Seas","Indian Ocean-HS-2282":"High Seas","Indian Ocean-HS-3525":"High Seas","Indian Ocean-HS-4495":"High Seas","Indian Ocean-HS-5625":"High Seas","Indian Ocean-HS-5641":"High Seas","Indian Ocean-HS-6182":"High Seas","Indian Ocean-HS-6193":"High Seas","Indian Ocean-IDN-6247":"Indonesian Exclusive Economic Zone","Indian Ocean-IND-6874":"Indian Exclusive Economic Zone","Indian Ocean-IND-6876":"Indian Exclusive Economic Zone","Indian Ocean-LKA-6215":"Sri Lankan Exclusive Economic Zone","Indian Ocean-MUS-5053":"Mauritian Exclusive Economic Zone","Indian Ocean-OMN-6859":"Omani Exclusive Economic Zone","Indian Ocean-REU-4323":"French Exclusive Economic Zone (Réunion)","Indian Ocean-SOM-6146":"Somali Exclusive Economic Zone","Indian Ocean-SYC-5638":"Seychellois Exclusive Economic Zone","North Atlantic Ocean-BHS-8078":"Bahamian Exclusive Economic Zone","North Atlantic Ocean-BMU-8097":"British Exclusive Economic Zone (Bermuda)","North Atlantic Ocean-HS-8080":"High Seas","North Atlantic Ocean-HS-8534":"High Seas","North Atlantic Ocean-HS-8583":"High Seas","North Atlantic Ocean-HS-8622":"High Seas","North Atlantic Ocean-PRT-8635":"Portuguese Exclusive Economic Zone","North Pacific Ocean-COL-6000":"Colombian Exclusive Economic Zone","North Pacific Ocean-FSM-6359":"Micronesian Exclusive Economic Zone","North Pacific Ocean-HS-5400":"High Seas","North Pacific Ocean-HS-6579":"High Seas","North Pacific Ocean-HS-7126":"High Seas","North Pacific Ocean-HS-7238":"High Seas","North Pacific Ocean-HS-7857":"High Seas","North Pacific Ocean-HS-8338":"High Seas","North Pacific Ocean-HS-8358":"High Seas","North Pacific Ocean-HS-9125":"High Seas","North Pacific Ocean-JPN-7807":"Japanese Exclusive Economic Zone","North Pacific Ocean-JPN-8334":"Japanese Exclusive Economic Zone","North Pacific Ocean-JPN-8736":"Japanese Exclusive Economic Zone","North Pacific Ocean-UMI-7240":"United States Exclusive Economic Zone (Johnston Atoll)","North Pacific Ocean-USA-8817":"United States Exclusive Economic Zone (Alaska)","North Pacific Ocean-USA-9093":"United States Exclusive Economic Zone (Alaska)","South Atlantic Ocean-ARG-1294":"Argentinian Exclusive Economic Zone","South Atlantic Ocean-ARG-1295":"Argentinian Exclusive Economic Zone","South Atlantic Ocean-BRA-4909":"Brazilian Exclusive Economic Zone","South Atlantic Ocean-FLK-1324":"Overlapping claim Falkland / Malvinas Islands: United Kingdom / Argentina","South Atlantic Ocean-HS-1329":"High Seas","South Atlantic Ocean-HS-1408":"High Seas","South Atlantic Ocean-HS-1419":"High Seas","South Atlantic Ocean-HS-1427":"High Seas","South Atlantic Ocean-HS-3348":"High Seas","South Atlantic Ocean-HS-3367":"High Seas","South Atlantic Ocean-SGS-1391":"Overlapping claim South Georgia and the South Sandwich Islands: United Kingdom / Argentina","South Atlantic Ocean-SHN-4950":"British Exclusive Economic Zone (Ascension)","South Atlantic Ocean-SHN-4975":"British Exclusive Economic Zone (Saint Helena)","South Pacific Ocean-AUS-1842":"Australian Exclusive Economic Zone (Macquarie Island)","South Pacific Ocean-HS-1835":"High Seas","South Pacific Ocean-HS-2037":"High Seas","South Pacific Ocean-HS-2473":"High Seas","South Pacific Ocean-HS-3076":"High Seas","South Pacific Ocean-HS-3820":"High Seas","South Pacific Ocean-HS-3835":"High Seas","South Pacific Ocean-HS-3843":"High Seas","South Pacific Ocean-HS-3859":"High Seas","South Pacific Ocean-HS-4677":"High Seas","South Pacific Ocean-HS-4893":"High Seas","South Pacific Ocean-HS-5421":"High Seas","South Pacific Ocean-HS-5874":"High Seas","South Pacific Ocean-NCL-4517":"French Exclusive Economic Zone (New Caledonia)","South Pacific Ocean-NZL-1923":"New Zealand Exclusive Economic Zone","South Pacific Ocean-NZL-2460":"New Zealand Exclusive Economic Zone","South Pacific Ocean-TON-3081":"Tongan Exclusive Economic Zone","South Pacific Ocean-TUV-5882":"Tuvaluan Exclusive Economic Zone","Southern Ocean-SGS-634":"Overlapping claim South Georgia and the South Sandwich Islands: United Kingdom / Argentina"};
+const ZONE_EEZ_HS = new Set(['Arctic Ocean-CAN-9768','Arctic Ocean-CAN-9769','Arctic Ocean-CAN-9780','Arctic Ocean-CAN-9794','Arctic Ocean-HS-9407','Arctic Ocean-HS-9608','Arctic Ocean-HS-9616','Arctic Ocean-HS-9674','Arctic Ocean-HS-9685','Arctic Ocean-HS-9687','Arctic Ocean-HS-9787','Arctic Ocean-HS-9792','Arctic Ocean-HS-9939','Arctic Ocean-HS-9940','Arctic Ocean-HS-9956','Arctic Ocean-RUS-9681','Arctic Ocean-RUS-9953','Arctic Ocean-RUS-9959','Arctic Ocean-RUS-9976','Arctic Ocean-RUS-9982','Arctic Ocean-RUS-9983','Arctic Ocean-SJM-9383','Arctic Ocean-SJM-9621','Arctic Ocean-SJM-9671','Indian Ocean-AUS-2943','Indian Ocean-AUS-4485','Indian Ocean-HMD-2334','Indian Ocean-HS-1668','Indian Ocean-HS-2280','Indian Ocean-HS-2282','Indian Ocean-HS-3525','Indian Ocean-HS-4495','Indian Ocean-HS-5625','Indian Ocean-HS-5641','Indian Ocean-HS-6182','Indian Ocean-HS-6193','Indian Ocean-IDN-6247','Indian Ocean-IND-6874','Indian Ocean-IND-6876','Indian Ocean-LKA-6215','Indian Ocean-MUS-5053','Indian Ocean-OMN-6859','Indian Ocean-REU-4323','Indian Ocean-SOM-6146','Indian Ocean-SYC-5638','North Atlantic Ocean-BHS-8078','North Atlantic Ocean-BMU-8097','North Atlantic Ocean-HS-8080','North Atlantic Ocean-HS-8534','North Atlantic Ocean-HS-8583','North Atlantic Ocean-HS-8622','North Atlantic Ocean-PRT-8635','North Pacific Ocean-COL-6000','North Pacific Ocean-FSM-6359','North Pacific Ocean-HS-5400','North Pacific Ocean-HS-6579','North Pacific Ocean-HS-7126','North Pacific Ocean-HS-7238','North Pacific Ocean-HS-7857','North Pacific Ocean-HS-8338','North Pacific Ocean-HS-8358','North Pacific Ocean-HS-9125','North Pacific Ocean-JPN-7807','North Pacific Ocean-JPN-8334','North Pacific Ocean-JPN-8736','North Pacific Ocean-UMI-7240','North Pacific Ocean-USA-8817','North Pacific Ocean-USA-9093','South Atlantic Ocean-ARG-1294','South Atlantic Ocean-ARG-1295','South Atlantic Ocean-BRA-4909','South Atlantic Ocean-FLK-1324','South Atlantic Ocean-HS-1329','South Atlantic Ocean-HS-1408','South Atlantic Ocean-HS-1419','South Atlantic Ocean-HS-1427','South Atlantic Ocean-HS-3348','South Atlantic Ocean-HS-3367','South Atlantic Ocean-SGS-1391','South Atlantic Ocean-SHN-4950','South Atlantic Ocean-SHN-4975','South Pacific Ocean-AUS-1842','South Pacific Ocean-HS-1835','South Pacific Ocean-HS-2037','South Pacific Ocean-HS-2473','South Pacific Ocean-HS-3076','South Pacific Ocean-HS-3820','South Pacific Ocean-HS-3835','South Pacific Ocean-HS-3843','South Pacific Ocean-HS-3859','South Pacific Ocean-HS-4677','South Pacific Ocean-HS-4893','South Pacific Ocean-HS-5421','South Pacific Ocean-HS-5874','South Pacific Ocean-NCL-4517','South Pacific Ocean-NZL-1923','South Pacific Ocean-NZL-2460','South Pacific Ocean-TON-3081','South Pacific Ocean-TUV-5882','Southern Ocean-SGS-634']);
+const ZONE_MULTI_EEZ_POINT = {"South Pacific Ocean-PCN-3182":"British Exclusive Economic Zone (Pitcairn)","South Pacific Ocean-NFK-3830":"Australian Exclusive Economic Zone (Norfolk Island)","South Pacific Ocean-TON-3921":"Tongan Exclusive Economic Zone","South Pacific Ocean-COK-3943":"New Zealand Exclusive Economic Zone (Cook Islands)","South Pacific Ocean-AUS-4549":"Australian Exclusive Economic Zone","South Pacific Ocean-VUT-4593":"Vanuatuan Exclusive Economic Zone","South Pacific Ocean-TUV-4663":"Tuvaluan Exclusive Economic Zone","South Pacific Ocean-ASM-4679":"United States Exclusive Economic Zone (American Samoa)","Indian Ocean-SYC-5026":"Seychellois Exclusive Economic Zone","South Pacific Ocean-SLB-5277":"Solomon Islands Exclusive Economic Zone","South Atlantic Ocean-COG-5604":"Congolese (Republic of) Exclusive Economic Zone","South Atlantic Ocean-AGO-5606":"Angolan Exclusive Economic Zone","North Atlantic Ocean-NGA-6137":"Nigerian Exclusive Economic Zone","South China and Easter Archipelagic Seas-IDN-6304":"Indonesian Exclusive Economic Zone","North Pacific Ocean-FSM-6424":"Micronesian Exclusive Economic Zone","North Pacific Ocean-MHL-6435":"Marshallese Exclusive Economic Zone","North Atlantic Ocean-DOM-6662":"Joint regime area: Dominican Republic / Colombia","North Atlantic Ocean-TTO-6675":"Trinidadian and Tobagonian Exclusive Economic Zone","North Atlantic Ocean-VEN-6680":"Venezuelan Exclusive Economic Zone","North Atlantic Ocean-MTQ-6700":"French Exclusive Economic Zone (Martinique)","North Atlantic Ocean-GMB-6794":"Gambian Exclusive Economic Zone","Indian Ocean-MMR-6961":"Myanma Exclusive Economic Zone","South China and Easter Archipelagic Seas-PHL-6971":"Philippine Exclusive Economic Zone","North Pacific Ocean-GUM-7061":"United States Exclusive Economic Zone (Guam)","North Atlantic Ocean-MEX-7396":"Mexican Exclusive Economic Zone","North Atlantic Ocean-HND-7412":"Honduran Exclusive Economic Zone","North Atlantic Ocean-MAF-7449":"French Exclusive Economic Zone (Collectivity of Saint Martin)","North Atlantic Ocean-VIR-7450":"United States Exclusive Economic Zone (United States Virgin Islands)","North Pacific Ocean-MNP-7758":"United States Exclusive Economic Zone (Northern Mariana Islands)","Mediterranean Region-ESP-8660":"Spanish Exclusive Economic Zone","Mediterranean Region-MLT-8666":"Maltese Exclusive Economic Zone","Mediterranean Region-MLT-8678":"Maltese Exclusive Economic Zone","Mediterranean Region-TUR-8710":"Turkish Exclusive Economic Zone","North Pacific Ocean-JPN-8729":"Japanese Exclusive Economic Zone","North Pacific Ocean-JPN-8750":"Overlapping claim Kuril Islands: Japan / Russia","North Atlantic Ocean-GBR-9238":"British Exclusive Economic Zone","North Atlantic Ocean-GBR-9239":"Joint regime area: United Kingdom / Denmark (Faeroe Islands)","North Atlantic Ocean-GBR-9240":"Joint regime area: United Kingdom / Denmark (Faeroe Islands)","North Pacific Ocean-USA-9267":"United States Exclusive Economic Zone (Alaska)","North Atlantic Ocean-ISL-9355":"Icelandic Exclusive Economic Zone","Arctic Ocean-CAN-9468":"Overlapping claim: Canada / United States","Arctic Ocean-CAN-9472":"Overlapping claim: Canada / United States","Arctic Ocean-CAN-9535":"Canadian Exclusive Economic Zone","Arctic Ocean-GRL-9539":"Danish Exclusive Economic Zone (Greenland)","Arctic Ocean-GRL-9573":"Danish Exclusive Economic Zone (Greenland)","Arctic Ocean-SJM-9583":"Norwegian Exclusive Economic Zone (Jan Mayen)","Arctic Ocean-SJM-9586":"Danish Exclusive Economic Zone (Greenland)","Arctic Ocean-ISL-9587":"Icelandic Exclusive Economic Zone","Arctic Ocean-SJM-9595":"Norwegian Exclusive Economic Zone (Jan Mayen)","Arctic Ocean-ISL-9596":"Joint regime area: Iceland / Norway (Jan Mayen)","Arctic Ocean-ISL-9597":"Joint regime area: Iceland / Norway (Jan Mayen)","Arctic Ocean-ISL-9599":"Joint regime area: Iceland / Norway (Jan Mayen)","Arctic Ocean-NOR-9629":"Norwegian Exclusive Economic Zone","Arctic Ocean-NOR-9652":"Norwegian Exclusive Economic Zone","Arctic Ocean-SJM-9660":"Norwegian Exclusive Economic Zone (Svalbard)","Arctic Ocean-NOR-9663":"Norwegian Exclusive Economic Zone","Arctic Ocean-GRL-9838":"Danish Exclusive Economic Zone (Greenland)","Arctic Ocean-GRL-9846":"Danish Exclusive Economic Zone (Greenland)","Arctic Ocean-RUS-9878":"Russian Exclusive Economic Zone"};
 const ZONE_MULTI_EEZ = new Set(['South Pacific Ocean-PCN-3182','South Pacific Ocean-NFK-3830','South Pacific Ocean-TON-3921','South Pacific Ocean-COK-3943','South Pacific Ocean-AUS-4549','South Pacific Ocean-VUT-4593','South Pacific Ocean-TUV-4663','South Pacific Ocean-ASM-4679','Indian Ocean-SYC-5026','South Pacific Ocean-SLB-5277','South Atlantic Ocean-COG-5604','South Atlantic Ocean-AGO-5606','North Atlantic Ocean-NGA-6137','South China and Easter Archipelagic Seas-IDN-6304','North Pacific Ocean-FSM-6424','North Pacific Ocean-MHL-6435','North Atlantic Ocean-DOM-6662','North Atlantic Ocean-TTO-6675','North Atlantic Ocean-VEN-6680','North Atlantic Ocean-MTQ-6700','North Atlantic Ocean-GMB-6794','Indian Ocean-MMR-6961','South China and Easter Archipelagic Seas-PHL-6971','North Pacific Ocean-GUM-7061','North Atlantic Ocean-MEX-7396','North Atlantic Ocean-HND-7412','North Atlantic Ocean-MAF-7449','North Atlantic Ocean-VIR-7450','North Pacific Ocean-MNP-7758','Mediterranean Region-ESP-8660','Mediterranean Region-MLT-8666','Mediterranean Region-MLT-8678','Mediterranean Region-TUR-8710','North Pacific Ocean-JPN-8729','North Pacific Ocean-JPN-8750','North Atlantic Ocean-GBR-9238','North Atlantic Ocean-GBR-9239','North Atlantic Ocean-GBR-9240','North Pacific Ocean-USA-9267','North Atlantic Ocean-ISL-9355','Arctic Ocean-CAN-9468','Arctic Ocean-CAN-9472','Arctic Ocean-CAN-9535','Arctic Ocean-GRL-9539','Arctic Ocean-GRL-9573','Arctic Ocean-SJM-9583','Arctic Ocean-SJM-9586','Arctic Ocean-ISL-9587','Arctic Ocean-SJM-9595','Arctic Ocean-ISL-9596','Arctic Ocean-ISL-9597','Arctic Ocean-ISL-9599','Arctic Ocean-NOR-9629','Arctic Ocean-NOR-9652','Arctic Ocean-SJM-9660','Arctic Ocean-NOR-9663','Arctic Ocean-GRL-9838','Arctic Ocean-GRL-9846','Arctic Ocean-RUS-9878']);
 
 const ZONE_SHALLOW  = new Set(['South Pacific Ocean-PYF-4758','Indian Ocean-IDN-5211','Mediterranean Region-ITA-8672','Mediterranean Region-ITA-8690','Mediterranean Region-CYP-8709','Arctic Ocean-CAN-9518','Arctic Ocean-CAN-9815']);
@@ -1018,6 +1038,7 @@ for (const [lon, lat, name, depth, geomorph, ocean, eez, mapped, observed, point
   else if (ZONE_SHALLOW.has(name))     { color = '#ffeb3b'; weight = 2; fillOpacity = 0.3; }
   else if (ZONE_OVERLAPS.has(name))    { color = '#ff6d00'; weight = 2; fillOpacity = 0.3; }
   else if (ZONE_MULTI_EEZ.has(name))   { color = '#ce93d8'; weight = 2; fillOpacity = 0.3; }
+  else if (ZONE_EEZ_HS.has(name))      { color = '#26c6da'; weight = 2; fillOpacity = 0.3; }
   const circleOpts = {
     radius: 5000,
     renderer: canvasRenderer,
@@ -1176,7 +1197,9 @@ function buildZonePopupContent(z) {
     : ZONE_OVERLAPS.has(z.name)
     ? `<div style="margin-bottom:7px;padding:3px 7px;background:#1a1000;border:1px solid #ff6d00;border-radius:4px;font-size:10px;color:#ff6d00;font-weight:700;">⚠ Zone flag: overlaps another zone</div>`
     : ZONE_MULTI_EEZ.has(z.name)
-    ? `<div style="margin-bottom:7px;padding:3px 7px;background:#1a0a1a;border:1px solid #ce93d8;border-radius:4px;font-size:10px;color:#ce93d8;font-weight:700;">⚠ Zone flag: crosses multiple EEZs</div>`
+    ? `<div style="margin-bottom:7px;padding:4px 7px;background:#1a0a1a;border:1px solid #ce93d8;border-radius:4px;font-size:10px;color:#ce93d8;font-weight:700;">⚠ Zone flag: crosses multiple EEZs${ZONE_MULTI_EEZ_POINT[z.name] ? `<div style="font-size:9px;font-weight:400;color:#d4a8e0;margin-top:3px;">Point falls in: ${ZONE_MULTI_EEZ_POINT[z.name]}</div>` : ''}</div>`
+    : ZONE_EEZ_HS.has(z.name)
+    ? `<div style="margin-bottom:7px;padding:4px 7px;background:#041a1a;border:1px solid #26c6da;border-radius:4px;font-size:10px;color:#26c6da;font-weight:700;">⚠ Zone flag: crosses EEZ / High Seas boundary${ZONE_EEZ_HS_POINT[z.name] ? `<div style="font-size:9px;font-weight:400;color:#80deea;margin-top:3px;">Point falls in: ${ZONE_EEZ_HS_POINT[z.name]}</div>` : ''}</div>`
     : '';
   return `<div style="min-width:220px;font-family:'Montserrat',sans-serif">
     <div style="font-size:13px;font-weight:700;margin-bottom:8px;color:#003">${z.name}</div>
@@ -4057,7 +4080,7 @@ function selectEEZ(name) {
 function clearEEZFilter() {
   activeEEZ = null;
   for (const z of zoneData) {
-    const flagged = ZONE_LAND.has(z.name) || ZONE_SHALLOW.has(z.name) || ZONE_OVERLAPS.has(z.name) || ZONE_MULTI_EEZ.has(z.name);
+    const flagged = ZONE_LAND.has(z.name) || ZONE_SHALLOW.has(z.name) || ZONE_OVERLAPS.has(z.name) || ZONE_MULTI_EEZ.has(z.name) || ZONE_EEZ_HS.has(z.name);
     zss(z, { opacity: 0.9, fillOpacity: flagged ? 0.3 : 0.15 });
   }
   const lbl = document.getElementById('eez-selected-label');
@@ -4074,7 +4097,7 @@ function exportEEZCSV() {
   const zones = eezIndex.get(activeEEZ) || [];
   const rows = ['Zone Name,EEZ,Ocean,Latitude,Longitude,Point Depth (m),Shore Distance (nm),Shore Distance (km),Seafloor Composition,Geomorphology,Depth Zone,Flag'];
   for (const z of zones) {
-    const flag = ZONE_LAND.has(z.name) ? 'Land' : ZONE_SHALLOW.has(z.name) ? 'Shallow' : ZONE_OVERLAPS.has(z.name) ? 'Overlapping' : ZONE_MULTI_EEZ.has(z.name) ? 'Multi-EEZ' : '';
+    const flag = ZONE_LAND.has(z.name) ? 'Land' : ZONE_SHALLOW.has(z.name) ? 'Shallow' : ZONE_OVERLAPS.has(z.name) ? 'Overlapping' : ZONE_MULTI_EEZ.has(z.name) ? 'Multi-EEZ' : ZONE_EEZ_HS.has(z.name) ? 'EEZ/High Seas' : '';
     const lat = typeof z.lat !== 'undefined' ? z.lat : '';
     const lon = typeof z.lon !== 'undefined' ? z.lon : '';
     rows.push([z.name, activeEEZ, z.ocean || '', lat, lon,
@@ -4117,7 +4140,7 @@ function toggleOceanColors() {
   });
   // Recolor all zones — respect existing flags
   for (const z of zoneData) {
-    if (ZONE_LAND.has(z.name) || ZONE_SHALLOW.has(z.name) || ZONE_OVERLAPS.has(z.name) || ZONE_MULTI_EEZ.has(z.name)) continue;
+    if (ZONE_LAND.has(z.name) || ZONE_SHALLOW.has(z.name) || ZONE_OVERLAPS.has(z.name) || ZONE_MULTI_EEZ.has(z.name) || ZONE_EEZ_HS.has(z.name)) continue;
     const col = oceanColorsOn ? z.defaultColor : GREY_ZONE;
     zss(z, { color: col, fillColor: col });
   }
@@ -4823,16 +4846,86 @@ function closeAdvancedSearch() {
 }
 
 function setAdvTab(tab) {
-  document.getElementById('adv-goals-pane').style.display = tab === 'goals' ? '' : 'none';
-  document.getElementById('adv-dives-pane').style.display = tab === 'dives' ? '' : 'none';
-  ['goals','dives'].forEach(t => {
+  document.getElementById('adv-goals-pane').style.display  = tab === 'goals'  ? '' : 'none';
+  document.getElementById('adv-dives-pane').style.display  = tab === 'dives'  ? '' : 'none';
+  document.getElementById('adv-saved-pane').style.display  = tab === 'saved'  ? '' : 'none';
+  ['goals','dives','saved'].forEach(t => {
     const btn = document.getElementById('adv-tab-' + t);
+    if (!btn) return;
     const active = t === tab;
-    btn.style.background         = active ? '#0E2446' : '#041018';
-    btn.style.borderBottomColor  = active ? '#4dd0e1' : 'transparent';
-    btn.style.color              = active ? '#4dd0e1' : '#8899bb';
+    btn.style.background        = active ? '#0E2446' : '#041018';
+    btn.style.borderBottomColor = active ? '#4dd0e1' : 'transparent';
+    btn.style.color             = active ? '#4dd0e1' : '#8899bb';
   });
   if (tab === 'dives') ensureDivesFilters();
+}
+
+function saveAdvSearch() {
+  const name = prompt('Name this search:');
+  if (!name || !name.trim()) return;
+  const advState = {};
+  ['gOceans','gDepths','gGeomorphs','gSeafloors','gEezs','gFlags','gStatuses','dTypes','dCountries','dInstitutions']
+    .forEach(k => advState[k] = [...ADV[k]]);
+  ['gMapped','gObserved','gEezSearch','gPointDepthMin','gPointDepthMax','gShoreNmMin','gShoreNmMax','dYearMin','dYearMax','dDepthMin','dDepthMax']
+    .forEach(k => advState[k] = ADV[k]);
+  window._fbSaveSearch(name.trim(), advState).catch(e => alert('Save failed: ' + e.message));
+}
+
+function loadAdvSearch(id) {
+  const s = (window._savedSearches || []).find(x => x.id === id);
+  if (!s) return;
+  clearAdvancedFilters();
+  const a = s.adv || {};
+  ['gOceans','gDepths','gGeomorphs','gSeafloors','gEezs','gFlags','gStatuses','dTypes','dCountries','dInstitutions']
+    .forEach(k => { if (Array.isArray(a[k])) a[k].forEach(v => ADV[k].add(v)); });
+  ['gMapped','gObserved','gPointDepthMin','gPointDepthMax','gShoreNmMin','gShoreNmMax','dYearMin','dYearMax','dDepthMin','dDepthMax']
+    .forEach(k => { if (a[k] !== undefined) ADV[k] = a[k]; });
+  // rebuild UI checkboxes to reflect loaded state
+  document.querySelectorAll('#adv-search-drawer input[type=checkbox]').forEach(cb => {
+    const key = cb.getAttribute('onchange')?.match(/'(\w+)'/)?.[1];
+    if (key && ADV[key] instanceof Set) cb.checked = ADV[key].has(cb.value);
+  });
+  document.querySelectorAll('#adv-search-drawer input[type=radio]').forEach(rb => {
+    const key = rb.getAttribute('onclick')?.match(/'(\w+)'/)?.[1];
+    if (key) rb.checked = rb.value === ADV[key];
+  });
+  applyAdvancedFilters();
+  setAdvTab('goals');
+}
+
+function deleteAdvSearch(id) {
+  if (!confirm('Delete this saved search?')) return;
+  window._fbDeleteSearch(id).catch(e => alert('Delete failed: ' + e.message));
+}
+
+function renderSavedSearches() {
+  const el = document.getElementById('adv-saved-pane');
+  if (!el) return;
+  const searches = window._savedSearches || [];
+  if (searches.length === 0) {
+    el.innerHTML = '<div style="font-size:10px;color:#8899bb;padding:24px 0;text-align:center;">No saved searches yet.<br><span style="font-size:9px;opacity:0.6;">Apply filters then click Save Search.</span></div>';
+    return;
+  }
+  el.innerHTML = searches.map(s => {
+    const date = s.createdAt?.seconds ? new Date(s.createdAt.seconds*1000).toLocaleDateString() : '';
+    const a = s.adv || {};
+    const parts = [];
+    ['gOceans','gDepths','gGeomorphs','gStatuses','gFlags','dTypes'].forEach(k => {
+      if (Array.isArray(a[k]) && a[k].length) parts.push(a[k].join(', '));
+    });
+    const preview = parts.join(' · ').slice(0, 80) || 'All filters';
+    return `<div style="padding:8px 10px;margin-bottom:6px;background:#061828;border:1px solid #187D8B;border-radius:6px;">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:6px;">
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:10px;font-weight:700;color:#4dd0e1;margin-bottom:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escH(s.name)}</div>
+          <div style="font-size:8.5px;color:#8899bb;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${escH(preview)}">${escH(preview)}</div>
+          ${date ? `<div style="font-size:8px;color:#4a6070;margin-top:2px;">${date}</div>` : ''}
+        </div>
+        <button onclick="deleteAdvSearch('${s.id}')" title="Delete" style="flex-shrink:0;background:none;border:none;color:#4a6070;font-size:13px;cursor:pointer;padding:0 2px;line-height:1;">✕</button>
+      </div>
+      <button onclick="loadAdvSearch('${s.id}')" style="margin-top:7px;width:100%;padding:5px;background:#041018;border:1px solid #4dd0e1;border-radius:4px;color:#4dd0e1;font-family:'Montserrat',sans-serif;font-size:9px;font-weight:700;cursor:pointer;letter-spacing:0.3px;">Load Search</button>
+    </div>`;
+  }).join('');
 }
 
 function advToggle(key, cb) {
@@ -4891,9 +4984,9 @@ function zonePassesAdv(z) {
   if (ADV.gFlags.size) {
     const f = ADV.gFlags;
     const iL = ZONE_LAND.has(z.name), iS = ZONE_SHALLOW.has(z.name);
-    const iO = ZONE_OVERLAPS.has(z.name), iM = ZONE_MULTI_EEZ.has(z.name);
+    const iO = ZONE_OVERLAPS.has(z.name), iM = ZONE_MULTI_EEZ.has(z.name), iH = ZONE_EEZ_HS.has(z.name);
     const any = (f.has('land')&&iL)||(f.has('shallow')&&iS)||(f.has('overlaps')&&iO)||
-                (f.has('multieez')&&iM)||(f.has('none')&&!iL&&!iS&&!iO&&!iM);
+                (f.has('multieez')&&iM)||(f.has('eezhs')&&iH)||(f.has('none')&&!iL&&!iS&&!iO&&!iM&&!iH);
     if (!any) return false;
   }
   return true;
@@ -4940,6 +5033,71 @@ function applyAdvancedFilters() {
   document.getElementById('adv-count-badge').textContent = parts.join(' · ');
 
   if (advResultsShowing) renderAdvResults();
+  renderAdvBreadcrumbs();
+}
+
+function renderAdvBreadcrumbs() {
+  const el = document.getElementById('adv-breadcrumbs');
+  if (!el) return;
+
+  const STATUS_LABELS = {none:'No Status',targeted:'Targeted',needinvestigation:'Need Investigation',underconsideration:'Under Consideration',complete:'Complete',verified:'Verified'};
+  const STATUS_COLORS = {none:'#8899bb',targeted:'#FFB300',needinvestigation:'#ff9800',underconsideration:'#29b6f6',complete:'#66bb6a',verified:'#ce93d8'};
+  const FLAG_LABELS   = {none:'No Flags',land:'Overlaps Land',shallow:'Intersects Shallow',overlaps:'Zones Overlap',multieez:'Multi-EEZ Overlap',eezhs:'EEZ/High Seas Overlap'};
+  const FLAG_COLORS   = {none:'#8899bb',land:'#f44336',shallow:'#ffd600',overlaps:'#ff9800',multieez:'#ce93d8',eezhs:'#26c6da'};
+
+  const chips = [];
+
+  const chip = (cat, label, color, onclick) =>
+    `<span style="display:inline-flex;align-items:center;gap:3px;margin:2px 3px;padding:2px 6px 2px 7px;background:#061828;border:1px solid ${color};border-radius:12px;font-size:8.5px;font-weight:700;color:${color};cursor:default;white-space:nowrap;">
+      <span style="font-size:7.5px;color:#8899bb;letter-spacing:0.5px;text-transform:uppercase;margin-right:2px;">${cat}:</span>${label}
+      <span onclick="${onclick}" style="cursor:pointer;margin-left:3px;opacity:0.75;font-size:10px;line-height:1;" title="Remove">×</span>
+    </span>`;
+
+  ADV.gStatuses.forEach(v  => chips.push(chip('Status',   STATUS_LABELS[v]||v, STATUS_COLORS[v]||'#8899bb', `advRemoveCrumb('gStatuses','${v}')`)));
+  ADV.gOceans.forEach(v    => chips.push(chip('Ocean',    v, '#4dd0e1', `advRemoveCrumb('gOceans','${v.replace(/'/g,"\\'")}')` )));
+  ADV.gDepths.forEach(v    => chips.push(chip('Depth',    v, '#4dd0e1', `advRemoveCrumb('gDepths','${v.replace(/'/g,"\\'")}')` )));
+  ADV.gGeomorphs.forEach(v => chips.push(chip('Geomorph', v, '#4dd0e1', `advRemoveCrumb('gGeomorphs','${v.replace(/'/g,"\\'")}')` )));
+  ADV.gSeafloors.forEach(v => chips.push(chip('Seafloor', v, '#4dd0e1', `advRemoveCrumb('gSeafloors','${v.replace(/'/g,"\\'")}')` )));
+  ADV.gEezs.forEach(v      => chips.push(chip('EEZ',      v.length>22?v.slice(0,20)+'…':v, '#4dd0e1', `advRemoveCrumb('gEezs','${v.replace(/\\/g,'\\\\').replace(/'/g,"\\'")}')` )));
+  ADV.gFlags.forEach(v     => chips.push(chip('Flag',     FLAG_LABELS[v]||v, FLAG_COLORS[v]||'#8899bb', `advRemoveCrumb('gFlags','${v}')`)));
+  if (ADV.gMapped)   chips.push(chip('Mapped',   ADV.gMapped==='Y'?'Yes':'No', '#81e1e7', "advClearRadio('gMapped')"));
+  if (ADV.gObserved) chips.push(chip('Observed', ADV.gObserved==='Y'?'Yes':'No', '#81e1e7', "advClearRadio('gObserved')"));
+  if (ADV.gPointDepthMin!==''||ADV.gPointDepthMax!=='') chips.push(chip('Pt Depth', (ADV.gPointDepthMin||'0')+'–'+(ADV.gPointDepthMax||'∞')+' m', '#81e1e7', "advClearRange('gPointDepthMin','gPointDepthMax')"));
+  if (ADV.gShoreNmMin!==''||ADV.gShoreNmMax!=='')       chips.push(chip('Shore Dist',(ADV.gShoreNmMin||'0')+'–'+(ADV.gShoreNmMax||'∞')+' nm','#81e1e7',"advClearRange('gShoreNmMin','gShoreNmMax')"));
+  ADV.dTypes.forEach(v       => chips.push(chip('Dive Type',  v, '#4dd0e1', `advRemoveCrumb('dTypes','${v.replace(/'/g,"\\'")}')` )));
+  ADV.dCountries.forEach(v   => chips.push(chip('Country',    v, '#4dd0e1', `advRemoveCrumb('dCountries','${v.replace(/'/g,"\\'")}')` )));
+  ADV.dInstitutions.forEach(v=> chips.push(chip('Institution',v.length>22?v.slice(0,20)+'…':v,'#4dd0e1',`advRemoveCrumb('dInstitutions','${v.replace(/\\/g,'\\\\').replace(/'/g,"\\'")}')` )));
+  if (ADV.dYearMin!==''||ADV.dYearMax!=='')   chips.push(chip('Year',  (ADV.dYearMin||'…')+'–'+(ADV.dYearMax||'…'), '#81e1e7', "advClearRange('dYearMin','dYearMax')"));
+  if (ADV.dDepthMin!==''||ADV.dDepthMax!=='') chips.push(chip('Dive Depth',(ADV.dDepthMin||'0')+'–'+(ADV.dDepthMax||'∞')+' m','#81e1e7',"advClearRange('dDepthMin','dDepthMax')"));
+
+  if (chips.length === 0) {
+    el.style.display = 'none';
+    return;
+  }
+  el.style.display = '';
+  el.innerHTML = `<div style="display:flex;flex-wrap:wrap;align-items:center;">${chips.join('')}</div>`;
+}
+
+function advRemoveCrumb(key, value) {
+  if (ADV[key] instanceof Set) {
+    ADV[key].delete(value);
+    const cb = document.querySelector(`#adv-search-drawer input[type=checkbox][value="${CSS.escape(value)}"]`);
+    if (cb) cb.checked = false;
+  }
+  applyAdvancedFilters();
+}
+
+function advClearRadio(key) {
+  ADV[key] = '';
+  document.querySelectorAll(`#adv-search-drawer input[type=radio][name="${key}"]`).forEach(r => { if (r.value==='') r.checked = true; });
+  applyAdvancedFilters();
+}
+
+function advClearRange(minKey, maxKey) {
+  ADV[minKey] = ''; ADV[maxKey] = '';
+  const container = document.getElementById(`adv-rng-${minKey}-b`);
+  if (container) container.querySelectorAll('input[type=number]').forEach(i => i.value = '');
+  applyAdvancedFilters();
 }
 
 function clearAdvancedFilters() {
@@ -4977,7 +5135,7 @@ function renderAdvResults() {
     const matches = goalsOn ? zoneData.filter(zonePassesAdv) : zoneData;
     document.getElementById('adv-results-note').textContent = `(first 200 of ${matches.length.toLocaleString()})`;
     html = matches.slice(0,200).map(z => {
-      const flag = ZONE_LAND.has(z.name)?'🔴':ZONE_SHALLOW.has(z.name)?'🟡':ZONE_OVERLAPS.has(z.name)?'🟠':ZONE_MULTI_EEZ.has(z.name)?'🟣':'';
+      const flag = ZONE_LAND.has(z.name)?'🔴':ZONE_SHALLOW.has(z.name)?'🟡':ZONE_OVERLAPS.has(z.name)?'🟠':ZONE_MULTI_EEZ.has(z.name)?'🟣':ZONE_EEZ_HS.has(z.name)?'🔵':'';
       return `<div onclick="closeAdvancedSearch();setTimeout(()=>map.setView([${z.lat},${z.lon}],9),300)"
         style="padding:4px 6px;border-bottom:1px solid #0c2030;cursor:pointer;border-radius:2px;"
         onmouseover="this.style.background='#0E2446'" onmouseout="this.style.background=''">
@@ -5035,9 +5193,9 @@ function makeFilterGroup(id, label, values, key, colorMap) {
 }
 
 function makeEEZGroup(eezs) {
-  const items = eezs.map(v => `<label style="display:flex;align-items:center;gap:5px;padding:3px 6px;cursor:pointer;font-size:9px;color:#81e1e7;overflow:hidden;" title="${escH(v)}">
-    <input type="checkbox" value="${escH(v)}" onchange="advToggle('gEezs',this)" style="flex-shrink:0;width:10px;height:10px;accent-color:#4dd0e1;cursor:pointer;">
-    <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escH(v)}</span>
+  const items = eezs.map(v => `<label style="display:flex;align-items:center;gap:5px;padding:3px 6px;cursor:pointer;font-size:9px;color:#81e1e7;min-width:0;" title="${escH(v)}">
+    <input type="checkbox" value="${escH(v)}" onchange="advToggle('gEezs',this)" style="flex:0 0 auto;width:10px;height:10px;accent-color:#4dd0e1;cursor:pointer;">
+    <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0;">${escH(v)}</span>
   </label>`).join('');
   return `<div style="margin-bottom:11px;">
     <div onclick="const b=document.getElementById('adv-eez-b');b.style.display=b.style.display==='none'?'':'none'" style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;margin-bottom:5px;padding-bottom:3px;border-bottom:1px solid #0d2a3a;">
@@ -5088,7 +5246,7 @@ function makeRangeGroup(label, minKey, maxKey, minPh, maxPh, unit) {
 }
 
 function makeFlagsGroup() {
-  const flags = [['none','#8899bb','No flags'],['land','#f44336','Near land'],['shallow','#ffd600','Shallow'],['overlaps','#ff9800','EEZ overlap'],['multieez','#ce93d8','Multi-EEZ']];
+  const flags = [['none','#8899bb','No flags'],['land','#f44336','Overlaps Land'],['shallow','#ffd600','Intersects Shallow'],['overlaps','#ff9800','Zones Overlap'],['multieez','#ce93d8','Multi-EEZ Overlap'],['eezhs','#26c6da','EEZ/High Seas Overlap']];
   const pills = flags.map(([val,col,lbl]) => `<label style="display:inline-flex;align-items:center;gap:3px;margin:2px;padding:3px 7px;border:1px solid ${col}55;border-radius:12px;cursor:pointer;font-size:9px;color:${col};background:#041018;white-space:nowrap;user-select:none;">
     <input type="checkbox" value="${val}" onchange="advToggle('gFlags',this)" style="width:10px;height:10px;accent-color:${col};cursor:pointer;flex-shrink:0;">${lbl}
   </label>`).join('');
@@ -5185,8 +5343,12 @@ function buildDivesFilters() {
   <!-- Tabs -->
   <div style="display:flex;flex-shrink:0;background:#041018;">
     <button id="adv-tab-goals" onclick="setAdvTab('goals')" style="flex:1;padding:8px 6px;background:#0E2446;border:none;border-bottom:2px solid #4dd0e1;color:#4dd0e1;font-family:'Montserrat',sans-serif;font-size:10px;font-weight:700;cursor:pointer;letter-spacing:0.3px;">Exploration Goals</button>
-    <button id="adv-tab-dives" onclick="setAdvTab('dives')" style="flex:1;padding:8px 6px;background:#041018;border:none;border-bottom:2px solid transparent;color:#8899bb;font-family:'Montserrat',sans-serif;font-size:10px;font-weight:700;cursor:pointer;letter-spacing:0.3px;">Historic Dives (Cleaned)</button>
+    <button id="adv-tab-dives" onclick="setAdvTab('dives')" style="flex:1;padding:8px 6px;background:#041018;border:none;border-bottom:2px solid transparent;color:#8899bb;font-family:'Montserrat',sans-serif;font-size:10px;font-weight:700;cursor:pointer;letter-spacing:0.3px;">Historic Dives</button>
+    <button id="adv-tab-saved" onclick="setAdvTab('saved')" style="flex:1;padding:8px 6px;background:#041018;border:none;border-bottom:2px solid transparent;color:#8899bb;font-family:'Montserrat',sans-serif;font-size:10px;font-weight:700;cursor:pointer;letter-spacing:0.3px;">Saved</button>
   </div>
+
+  <!-- Active filter breadcrumbs -->
+  <div id="adv-breadcrumbs" style="display:none;padding:5px 10px 4px;border-bottom:1px solid #0d2a3a;flex-shrink:0;max-height:94px;overflow-y:auto;background:#041018;"></div>
 
   <!-- Scrollable filters -->
   <div id="adv-scroll" style="flex:1;overflow-y:auto;padding:10px 12px 6px;">
@@ -5194,6 +5356,9 @@ function buildDivesFilters() {
       <div style="font-size:10px;color:#8899bb;padding:20px 0;text-align:center;">Loading…</div>
     </div>
     <div id="adv-dives-pane" style="display:none;">
+      <div style="font-size:10px;color:#8899bb;padding:20px 0;text-align:center;">Loading…</div>
+    </div>
+    <div id="adv-saved-pane" style="display:none;">
       <div style="font-size:10px;color:#8899bb;padding:20px 0;text-align:center;">Loading…</div>
     </div>
     <!-- Results list -->
@@ -5206,10 +5371,16 @@ function buildDivesFilters() {
   </div>
 
   <!-- Footer -->
-  <div style="flex-shrink:0;padding:8px 12px;border-top:1px solid #187D8B;background:#041018;display:flex;gap:6px;align-items:center;">
-    <button onclick="clearAdvancedFilters()" style="flex:1;padding:7px 8px;background:#041820;border:1px solid #187D8B;border-radius:5px;color:#8899bb;font-family:'Montserrat',sans-serif;font-size:10px;font-weight:600;cursor:pointer;">Clear All</button>
-    <button id="adv-results-toggle-btn" onclick="toggleAdvResults()" style="flex:1;padding:7px 8px;background:#041820;border:1px solid #4dd0e1;border-radius:5px;color:#4dd0e1;font-family:'Montserrat',sans-serif;font-size:10px;font-weight:600;cursor:pointer;">Show List</button>
-    <button onclick="exportAdvancedCSV()" title="Export filtered results as CSV" style="flex:0 0 auto;padding:7px 10px;background:#041820;border:1px solid #187D8B;border-radius:5px;color:#41B9C3;font-family:'Montserrat',sans-serif;font-size:10px;font-weight:600;cursor:pointer;">↓ CSV</button>
+  <div style="flex-shrink:0;padding:8px 12px;border-top:1px solid #187D8B;background:#041018;display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
+    <div style="display:flex;gap:6px;width:100%;">
+      <button onclick="clearAdvancedFilters()" style="flex:1;padding:7px 8px;background:#041820;border:1px solid #187D8B;border-radius:5px;color:#8899bb;font-family:'Montserrat',sans-serif;font-size:10px;font-weight:600;cursor:pointer;">Clear All</button>
+      <button id="adv-results-toggle-btn" onclick="toggleAdvResults()" style="flex:1;padding:7px 8px;background:#041820;border:1px solid #4dd0e1;border-radius:5px;color:#4dd0e1;font-family:'Montserrat',sans-serif;font-size:10px;font-weight:600;cursor:pointer;">Show List</button>
+      <button onclick="exportAdvancedCSV()" title="Export filtered results as CSV" style="flex:0 0 auto;padding:7px 10px;background:#041820;border:1px solid #187D8B;border-radius:5px;color:#41B9C3;font-family:'Montserrat',sans-serif;font-size:10px;font-weight:600;cursor:pointer;">↓ CSV</button>
+    </div>
+    <button onclick="saveAdvSearch()" style="width:100%;padding:7px 8px;background:#041820;border:1px solid #4dd0e1;border-radius:5px;color:#4dd0e1;font-family:'Montserrat',sans-serif;font-size:10px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;">
+      <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+      Save Search
+    </button>
   </div>
 </div>
 
