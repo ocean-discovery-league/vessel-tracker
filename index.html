@@ -218,6 +218,7 @@
         <div class="subsection-label" onclick="toggleNautilusROV()" style="cursor:pointer;user-select:none;">ROV Live Data <span style="font-size:8px;color:#29b6f6;font-weight:400;letter-spacing:0;text-transform:none;">(graphs.oceanexplorationtrust.org)</span><span id="n-rov-arrow" style="margin-left:auto;">▼</span></div>
         <div id="n-rov-body">
           <div class="data-grid">
+            <div class="data-item"><div class="data-label">Ship Speed (kn)</div><div class="data-value" id="n-rov-speed">—</div></div>
             <div class="data-item"><div class="data-label">ROV Depth</div><div class="data-value" id="n-rov-depth">—</div></div>
             <div class="data-item"><div class="data-label">Water Temp</div><div class="data-value" id="n-rov-temp">—</div></div>
             <div class="data-item"><div class="data-label">CTD Salinity</div><div class="data-value" id="n-rov-sal">—</div></div>
@@ -1318,6 +1319,7 @@ function haversineM(lat1, lon1, lat2, lon2) {
 
 function updateROVDisplay(data) {
   const fmt = (v, digits, unit) => v != null ? Number(v).toFixed(digits) + unit : '—';
+  document.getElementById('n-rov-speed').textContent = fmt(data.speed, 1, ' kn');
   document.getElementById('n-rov-depth').textContent = data.depth != null ? Math.abs(data.depth).toFixed(0) + ' m' : '—';
   document.getElementById('n-rov-temp').textContent  = fmt(data.temp,  2, ' °C');
   document.getElementById('n-rov-sal').textContent   = fmt(data.sal,   1, ' PSU');
