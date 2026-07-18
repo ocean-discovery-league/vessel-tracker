@@ -45,15 +45,7 @@ export default async function handler(req, res) {
       temp:  getVal('TEMP') ?? getVal('TEMP2'),
       sal:   getVal('SAL'),
       o2:    getVal('O2') ?? getVal('O22'),
-      timestamp: d.results.LAT?.frames?.[0]?.data?.values?.[0]?.[0] ?? null,
-      _debug: Object.fromEntries(
-        ['DEPTH','DEPTH2','TEMP','TEMP2','SAL','O2','O22'].map(k => [
-          k, {
-            frames: d.results[k]?.frames?.length ?? 0,
-            val: d.results[k]?.frames?.[0]?.data?.values?.[1]?.[0] ?? null
-          }
-        ])
-      )
+      timestamp: d.results.LAT?.frames?.[0]?.data?.values?.[0]?.[0] ?? null
     });
   } catch (e) {
     return res.status(500).json({ error: e.message });
