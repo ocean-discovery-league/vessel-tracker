@@ -8,17 +8,20 @@ export default async function handler(req, res) {
 
   const q = (measurement, field, refId) => ({
     datasource: DS,
-    query: `from(bucket: "nautilus") |> range(start: -5m) |> filter(fn: (r) => r._measurement == "${measurement}" and r._field == "${field}") |> last()`,
+    query: `from(bucket: "nautilus") |> range(start: -30m) |> filter(fn: (r) => r["_measurement"] == "${measurement}") |> filter(fn: (r) => r["_field"] == "${field}") |> last()`,
     refId
   });
 
   const queries = [
-    q('sonardyne_nav', 'latitude',   'LAT'),
-    q('sonardyne_nav', 'longitude',  'LON'),
-    q('herc_file_data','depth_herc', 'DEPTH'),
-    q('ctd',           'temperature','TEMP'),
-    q('ctd',           'salinity',   'SAL'),
-    q('herc_file_data','saturation', 'O2'),
+    q('sonardyne_nav',  'latitude',    'LAT'),
+    q('sonardyne_nav',  'longitude',   'LON'),
+    q('herc_file_data', 'depth_herc',  'DEPTH'),
+    q('lherc_file_data','depth_lherc', 'DEPTH2'),
+    q('ctd',            'temperature',    'TEMP'),
+    q('lhctd',          'temperature_ct', 'TEMP2'),
+    q('ctd',            'salinity',       'SAL'),
+    q('herc_file_data', 'saturation', 'O2'),
+    q('lhO2',           'O2_percent', 'O22'),
   ];
 
   try {
@@ -38,11 +41,19 @@ export default async function handler(req, res) {
 
     return res.status(200).json({
       lat, lon,
-      depth: getVal('DEPTH'),
-      temp:  getVal('TEMP'),
+      depth: getVal('DEPTH') ?? getVal('DEPTH2'),
+      temp:  getVal('TEMP') ?? getVal('TEMP2'),
       sal:   getVal('SAL'),
-      o2:    getVal('O2'),
-      timestamp: d.results.LAT?.frames?.[0]?.data?.values?.[0]?.[0] ?? null
+      o2:    getVal('O2') ?? getVal('O22'),
+      timestamp: d.results.LAT?.frames?.[0]?.data?.values?.[0]?.[0] ?? null,
+      _debug: Object.fromEntries(
+        ['DEPTH','DEPTH2','TEMP','TEMP2','SAL','O2','O22'].map(k => [
+          k, {
+            frames: d.results[k]?.frames?.length ?? 0,
+            val: d.results[k]?.frames?.[0]?.data?.values?.[1]?.[0] ?? null
+          }
+        ])
+      )
     });
   } catch (e) {
     return res.status(500).json({ error: e.message });
