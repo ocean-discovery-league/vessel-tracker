@@ -20,8 +20,9 @@ export default async function handler(req, res) {
     q('ctd',            'temperature',    'TEMP'),
     q('lhctd',          'temperature_ct', 'TEMP2'),
     q('ctd',            'salinity',       'SAL'),
-    q('herc_file_data', 'saturation', 'O2'),
-    q('lhO2',           'O2_percent', 'O22'),
+    q('herc_file_data', 'saturation',          'O2'),
+    q('lhO2',           'O2_percent',           'O22'),
+    q('bnav_data',      'vtg_track_speed_knots','SPD'),
   ];
 
   try {
@@ -45,6 +46,7 @@ export default async function handler(req, res) {
       temp:  getVal('TEMP') ?? getVal('TEMP2'),
       sal:   getVal('SAL'),
       o2:    getVal('O2') ?? getVal('O22'),
+      speed: getVal('SPD'),
       timestamp: d.results.LAT?.frames?.[0]?.data?.values?.[0]?.[0] ?? null
     });
   } catch (e) {
