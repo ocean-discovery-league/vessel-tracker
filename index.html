@@ -467,6 +467,12 @@
       </div>
       <input id="eez-search" type="text" placeholder="Search EEZs…" oninput="eezZeroFilter=false;updateEEZZeroBtn();renderEEZList()"
         style="width:100%;box-sizing:border-box;background:#041018;border:1px solid #187D8B;border-radius:4px;color:#e0e6f0;font-size:10px;font-family:'Montserrat',sans-serif;padding:5px 8px;margin-bottom:6px;">
+      <div style="position:relative;margin-bottom:6px;">
+        <input id="zone-name-search" type="text" placeholder="Search zones by name or number…" oninput="applyZoneNameSearch(this.value)"
+          style="width:100%;box-sizing:border-box;background:#041018;border:1px solid #4dd0e1;border-radius:4px;color:#e0e6f0;font-size:10px;font-family:'Montserrat',sans-serif;padding:5px 28px 5px 8px;">
+        <span id="zone-name-clear" onclick="clearZoneNameSearch()" style="display:none;position:absolute;right:7px;top:50%;transform:translateY(-50%);color:#4dd0e1;cursor:pointer;font-size:13px;line-height:1;">✕</span>
+      </div>
+      <div id="zone-name-count" style="display:none;font-size:9px;color:#4dd0e1;margin-bottom:5px;"></div>
       <div style="display:flex;gap:4px;margin-bottom:6px;">
         <button id="eez-sort-count" onclick="setEEZSort('count')"
           style="flex:1;font-size:9px;font-family:'Montserrat',sans-serif;padding:4px;border-radius:3px;cursor:pointer;font-weight:700;letter-spacing:0.3px;background:#003322;border:1px solid #a5d6a7;color:#a5d6a7;">
@@ -4082,6 +4088,41 @@ function selectEEZ(name) {
   }
 }
 
+let zoneNameSearchVal = '';
+
+function applyZoneNameSearch(val) {
+  zoneNameSearchVal = val.trim().toLowerCase();
+  const clearBtn = document.getElementById('zone-name-clear');
+  const countEl  = document.getElementById('zone-name-count');
+  if (!zoneNameSearchVal) {
+    if (clearBtn) clearBtn.style.display = 'none';
+    if (countEl)  countEl.style.display  = 'none';
+    // restore default appearance (respect EEZ filter if active)
+    for (const z of zoneData) {
+      const flagged = ZONE_LAND.has(z.name)||ZONE_SHALLOW.has(z.name)||ZONE_OVERLAPS.has(z.name)||ZONE_MULTI_EEZ.has(z.name)||ZONE_EEZ_HS.has(z.name);
+      const inEEZ = !activeEEZ || z.eez === activeEEZ;
+      zss(z, { opacity: inEEZ ? 0.9 : 0.06, fillOpacity: inEEZ ? (flagged ? 0.3 : 0.15) : 0.04 });
+    }
+    return;
+  }
+  if (clearBtn) clearBtn.style.display = '';
+  let matches = 0;
+  for (const z of zoneData) {
+    const nameLC = z.name.toLowerCase();
+    const pass = nameLC.includes(zoneNameSearchVal);
+    const flagged = ZONE_LAND.has(z.name)||ZONE_SHALLOW.has(z.name)||ZONE_OVERLAPS.has(z.name)||ZONE_MULTI_EEZ.has(z.name)||ZONE_EEZ_HS.has(z.name);
+    zss(z, { opacity: pass ? 0.9 : 0.06, fillOpacity: pass ? (flagged ? 0.3 : 0.15) : 0.04 });
+    if (pass) matches++;
+  }
+  if (countEl) { countEl.style.display = ''; countEl.textContent = `${matches.toLocaleString()} zone${matches !== 1 ? 's' : ''} match`; }
+}
+
+function clearZoneNameSearch() {
+  const inp = document.getElementById('zone-name-search');
+  if (inp) inp.value = '';
+  applyZoneNameSearch('');
+}
+
 function clearEEZFilter() {
   activeEEZ = null;
   for (const z of zoneData) {
@@ -4832,7 +4873,7 @@ let advResultsShowing = false;
 const ADV = {
   gOceans: new Set(), gDepths: new Set(), gGeomorphs: new Set(),
   gSeafloors: new Set(), gEezs: new Set(), gEezSearch: '',
-  gMapped: '', gObserved: '',
+  gMapped: '', gObserved: '', gZoneName: '',
   gPointDepthMin: '', gPointDepthMax: '',
   gShoreNmMin: '',    gShoreNmMax: '',
   gFlags: new Set(), gStatuses: new Set(),
@@ -4871,7 +4912,7 @@ function saveAdvSearch() {
   const advState = {};
   ['gOceans','gDepths','gGeomorphs','gSeafloors','gEezs','gFlags','gStatuses','dTypes','dCountries','dInstitutions','dSovereigns']
     .forEach(k => advState[k] = [...ADV[k]]);
-  ['gMapped','gObserved','gEezSearch','gPointDepthMin','gPointDepthMax','gShoreNmMin','gShoreNmMax','dYearMin','dYearMax','dDepthMin','dDepthMax']
+  ['gMapped','gObserved','gEezSearch','gZoneName','gPointDepthMin','gPointDepthMax','gShoreNmMin','gShoreNmMax','dYearMin','dYearMax','dDepthMin','dDepthMax']
     .forEach(k => advState[k] = ADV[k]);
   window._fbSaveSearch(name.trim(), advState).catch(e => alert('Save failed: ' + e.message));
 }
@@ -4883,7 +4924,7 @@ function loadAdvSearch(id) {
   const a = s.adv || {};
   ['gOceans','gDepths','gGeomorphs','gSeafloors','gEezs','gFlags','gStatuses','dTypes','dCountries','dInstitutions','dSovereigns']
     .forEach(k => { if (Array.isArray(a[k])) a[k].forEach(v => ADV[k].add(v)); });
-  ['gMapped','gObserved','gPointDepthMin','gPointDepthMax','gShoreNmMin','gShoreNmMax','dYearMin','dYearMax','dDepthMin','dDepthMax']
+  ['gMapped','gObserved','gZoneName','gPointDepthMin','gPointDepthMax','gShoreNmMin','gShoreNmMax','dYearMin','dYearMax','dDepthMin','dDepthMax']
     .forEach(k => { if (a[k] !== undefined) ADV[k] = a[k]; });
   // rebuild UI checkboxes to reflect loaded state
   document.querySelectorAll('#adv-search-drawer input[type=checkbox]').forEach(cb => {
@@ -4958,7 +4999,7 @@ function advEezSearch(val) {
 
 function isAdvGoalsActive() {
   return ADV.gOceans.size || ADV.gDepths.size || ADV.gGeomorphs.size ||
-    ADV.gSeafloors.size || ADV.gEezs.size || ADV.gMapped || ADV.gObserved ||
+    ADV.gSeafloors.size || ADV.gEezs.size || ADV.gMapped || ADV.gObserved || ADV.gZoneName ||
     ADV.gPointDepthMin !== '' || ADV.gPointDepthMax !== '' ||
     ADV.gShoreNmMin !== '' || ADV.gShoreNmMax !== '' || ADV.gFlags.size;
 }
@@ -4974,6 +5015,7 @@ function zonePassesAdv(z) {
   if (ADV.gGeomorphs.size && !ADV.gGeomorphs.has(z.geomorph)) return false;
   if (ADV.gSeafloors.size && !ADV.gSeafloors.has(z.seafloor)) return false;
   if (ADV.gEezs.size      && !ADV.gEezs.has(z.eez))          return false;
+  if (ADV.gZoneName && !z.name.toLowerCase().includes(ADV.gZoneName.toLowerCase())) return false;
   if (ADV.gMapped   && z.mapped   !== ADV.gMapped)   return false;
   if (ADV.gObserved && z.observed !== ADV.gObserved) return false;
   const d = Math.abs(z.pointDepth || 0);
@@ -5073,6 +5115,7 @@ function renderAdvBreadcrumbs() {
   ADV.gSeafloors.forEach(v => chips.push(chip('Seafloor', v, '#4dd0e1', `advRemoveCrumb('gSeafloors','${v.replace(/'/g,"\\'")}')` )));
   ADV.gEezs.forEach(v      => chips.push(chip('EEZ',      v.length>22?v.slice(0,20)+'…':v, '#4dd0e1', `advRemoveCrumb('gEezs','${v.replace(/\\/g,'\\\\').replace(/'/g,"\\'")}')` )));
   ADV.gFlags.forEach(v     => chips.push(chip('Flag',     FLAG_LABELS[v]||v, FLAG_COLORS[v]||'#8899bb', `advRemoveCrumb('gFlags','${v}')`)));
+  if (ADV.gZoneName) chips.push(chip('Zone', ADV.gZoneName, '#4dd0e1', "advClearZoneName()"));
   if (ADV.gMapped)   chips.push(chip('Mapped',   ADV.gMapped==='Y'?'Yes':'No', '#81e1e7', "advClearRadio('gMapped')"));
   if (ADV.gObserved) chips.push(chip('Observed', ADV.gObserved==='Y'?'Yes':'No', '#81e1e7', "advClearRadio('gObserved')"));
   if (ADV.gPointDepthMin!==''||ADV.gPointDepthMax!=='') chips.push(chip('Pt Depth', (ADV.gPointDepthMin||'0')+'–'+(ADV.gPointDepthMax||'∞')+' m', '#81e1e7', "advClearRange('gPointDepthMin','gPointDepthMax')"));
@@ -5101,6 +5144,13 @@ function advRemoveCrumb(key, value) {
   applyAdvancedFilters();
 }
 
+function advClearZoneName() {
+  ADV.gZoneName = '';
+  const el = document.getElementById('adv-zone-name-search');
+  if (el) el.value = '';
+  applyAdvancedFilters();
+}
+
 function advClearRadio(key) {
   ADV[key] = '';
   document.querySelectorAll(`#adv-search-drawer input[type=radio][name="${key}"]`).forEach(r => { if (r.value==='') r.checked = true; });
@@ -5117,8 +5167,10 @@ function advClearRange(minKey, maxKey) {
 function clearAdvancedFilters() {
   ['gOceans','gDepths','gGeomorphs','gSeafloors','gEezs','gFlags','gStatuses',
    'dTypes','dCountries','dInstitutions'].forEach(k => ADV[k].clear());
-  ['gMapped','gObserved','gEezSearch','gPointDepthMin','gPointDepthMax',
+  ['gMapped','gObserved','gEezSearch','gZoneName','gPointDepthMin','gPointDepthMax',
    'gShoreNmMin','gShoreNmMax','dYearMin','dYearMax','dDepthMin','dDepthMax'].forEach(k => ADV[k]='');
+  const zni = document.getElementById('adv-zone-name-search');
+  if (zni) zni.value = '';
   document.querySelectorAll('#adv-search-drawer input[type=checkbox]').forEach(cb => cb.checked = false);
   document.querySelectorAll('#adv-search-drawer input[type=radio]').forEach(rb => { if (rb.value==='') rb.checked = true; });
   document.querySelectorAll('#adv-search-drawer input[type=number]').forEach(n => n.value = '');
@@ -5295,7 +5347,14 @@ function buildAdvFilters() {
     <div id="adv-status-b" style="display:flex;flex-wrap:wrap;gap:1px;">${statusPills}</div>
   </div>`;
 
+  const zoneNameGroup = `<div style="margin-bottom:11px;">
+    <div style="font-size:9px;font-weight:700;color:#41B9C3;letter-spacing:1px;text-transform:uppercase;margin-bottom:5px;padding-bottom:3px;border-bottom:1px solid #0d2a3a;">Zone Name / Number</div>
+    <input id="adv-zone-name-search" type="text" placeholder="Search by name or number…" oninput="ADV.gZoneName=this.value;applyAdvancedFilters()"
+      style="width:100%;box-sizing:border-box;padding:5px 8px;background:#041018;border:1px solid #187D8B;border-radius:4px;color:#81e1e7;font-family:'Montserrat',sans-serif;font-size:9px;" autocomplete="off">
+  </div>`;
+
   document.getElementById('adv-goals-pane').innerHTML =
+    zoneNameGroup +
     statusGroup +
     makeFilterGroup('adv-g-ocean',   'Ocean Basin',          oceans,    'gOceans',    null) +
     makeFilterGroup('adv-g-depth',   'Depth Zone',           depths,    'gDepths',    null) +
