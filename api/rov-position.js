@@ -29,7 +29,7 @@ export default async function handler(req, res) {
     const r = await fetch(GRAFANA, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ queries, from: 'now-5m', to: 'now' })
+      body: JSON.stringify({ queries, from: 'now-30m', to: 'now' })
     });
     if (!r.ok) return res.status(502).json({ error: 'Grafana error', status: r.status });
 
