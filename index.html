@@ -647,6 +647,35 @@
     <path d="M9 19v2M12 19v3M15 19v2"/>
   </svg>
 </div>
+<div id="goal-markers-btn" onclick="toggleGoalMarkers()"
+  class="map-overlay-btn"
+  style="position:fixed;top:404px;right:10px;z-index:1000;width:34px;height:34px;
+         background:#0E2446;border:2px solid #187D8B;border-radius:6px;cursor:pointer;
+         display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.5);">
+  <span class="map-btn-tip">Goals in Progress</span>
+  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="#81e1e7" stroke="#81e1e7" stroke-width="0">
+    <polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"/>
+  </svg>
+</div>
+<div id="vessels-btn" onclick="toggleVessels()"
+  class="map-overlay-btn"
+  style="position:fixed;top:440px;right:10px;z-index:1000;width:34px;height:34px;
+         background:#0E2446;border:2px solid #187D8B;border-radius:6px;cursor:pointer;
+         display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.5);">
+  <span class="map-btn-tip">Live Vessels</span>
+  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#81e1e7" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+    <!-- hull -->
+    <path d="M3 14h18l-2 5H5Z"/>
+    <!-- deck superstructure -->
+    <rect x="8" y="9" width="8" height="5" rx="1"/>
+    <!-- bridge -->
+    <rect x="10" y="6" width="4" height="3" rx="0.5"/>
+    <!-- mast -->
+    <line x1="12" y1="3" x2="12" y2="6"/>
+    <!-- water line -->
+    <path d="M1 20.5q3-1.5 5.5 0t5.5 0 5.5 0 4.5 0" stroke-width="1.2" opacity="0.6"/>
+  </svg>
+</div>
 <div id="weather-ctrl" style="display:none;position:fixed;top:368px;right:48px;z-index:1000;
      background:#0E2446;border:1px solid #187D8B;border-radius:6px;padding:10px 12px;
      box-shadow:0 2px 10px rgba(0,0,0,0.6);font-family:'Montserrat',sans-serif;min-width:220px;">
@@ -1035,6 +1064,66 @@ const ZONE_LAND     = new Set(['Arctic Ocean-CAN-9799','Arctic Ocean-GRL-9825','
   'Southern Ocean-ATA-553','Southern Ocean-ATA-562','Southern Ocean-ATA-181','Southern Ocean-ATA-189']);
 
 const zoneData = [];   // { lon, lat, name, depth, geomorph, ocean, eez, circle, circleW }
+
+// Auto-hide color controls after a delay
+const _colorCtrlTimers = {};
+function showColorCtrl(id, delayMs = 4000) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.style.display = 'flex';
+  clearTimeout(_colorCtrlTimers[id]);
+  _colorCtrlTimers[id] = setTimeout(() => { el.style.display = 'none'; }, delayMs);
+}
+
+let zonesVisible   = true;
+let vesselsVisible = true;
+
+function toggleZones() {
+  zonesVisible = !zonesVisible;
+  for (const z of zoneData) {
+    if (zonesVisible) { z.circle.addTo(map); if (z.circleW) z.circleW.addTo(map); }
+    else              { z.circle.remove();   if (z.circleW) z.circleW.remove(); }
+  }
+  const btn = document.getElementById('toggle-zones-btn');
+  if (btn) {
+    btn.style.opacity = zonesVisible ? '1' : '0.45';
+    btn.title = zonesVisible ? 'Hide Goals on Map' : 'Show Goals on Map';
+  }
+}
+
+let goalMarkersVisible = true;
+
+function toggleGoalMarkers() {
+  goalMarkersVisible = !goalMarkersVisible;
+  for (const m of Object.values(targetMarkers)) {
+    goalMarkersVisible ? m.addTo(map) : m.remove();
+  }
+  const btn = document.getElementById('goal-markers-btn');
+  if (btn) {
+    btn.style.opacity = goalMarkersVisible ? '1' : '0.45';
+    btn.querySelector('svg polygon').setAttribute('fill', goalMarkersVisible ? '#FFB300' : '#81e1e7');
+    btn.querySelector('svg polygon').setAttribute('stroke', goalMarkersVisible ? '#FFB300' : '#81e1e7');
+    btn.title = goalMarkersVisible ? 'Goals in Progress' : 'Goals in Progress (hidden)';
+  }
+}
+
+function toggleVessels() {
+  vesselsVisible = !vesselsVisible;
+  // Falkor
+  if (vesselMarker)      { vesselsVisible ? vesselMarker.addTo(map)      : vesselMarker.remove(); }
+  if (trackLine)         { vesselsVisible ? trackLine.addTo(map)          : trackLine.remove(); }
+  // Nautilus
+  if (nautilusMarker)    { vesselsVisible ? nautilusMarker.addTo(map)    : nautilusMarker.remove(); }
+  if (nautilusTrackLine) { vesselsVisible ? nautilusTrackLine.addTo(map) : nautilusTrackLine.remove(); }
+  // Okeanos
+  if (okeanosMarker)     { vesselsVisible ? okeanosMarker.addTo(map)     : okeanosMarker.remove(); }
+  if (okeanosTrackLine)  { vesselsVisible ? okeanosTrackLine.addTo(map)  : okeanosTrackLine.remove(); }
+  const btn = document.getElementById('vessels-btn');
+  if (btn) {
+    btn.style.opacity = vesselsVisible ? '1' : '0.45';
+    btn.title = vesselsVisible ? 'Live Vessels' : 'Live Vessels (hidden)';
+  }
+}
 
 // Helper: apply a style to a zone's primary circle AND its western-copy circle (if any)
 function zss(z, style) {
@@ -1425,8 +1514,9 @@ async function fetchNautilusData() {
     dot.removeAttribute('style');
 
     if (!nautilusMarker) {
-      nautilusMarker = L.marker([a.latitude, pacificLon(a.longitude)], { icon: nautilusIcon, zIndexOffset: 9998 }).addTo(map);
+      nautilusMarker = L.marker([a.latitude, pacificLon(a.longitude)], { icon: nautilusIcon, zIndexOffset: 9998 });
       nautilusMarker.bindPopup('<b>EV Nautilus</b>');
+      if (vesselsVisible) nautilusMarker.addTo(map);
     } else {
       nautilusMarker.setLatLng([a.latitude, pacificLon(a.longitude)]);
     }
@@ -1446,7 +1536,8 @@ async function fetchNautilusData() {
           // Each path is an array of [lon, lat] — convert to [lat, lon] for Leaflet
           const latlngs = feat.geometry.paths.flatMap(path => path.map(([lon, lat]) => [lat, lon]));
           if (nautilusTrackLine) nautilusTrackLine.remove();
-          nautilusTrackLine = L.featureGroup(splitAtAntimeridian(latlngs).map(s => L.polyline(s, { color: '#29b6f6', weight: 2, opacity: 0.5, dashArray: '5 5' }))).addTo(map);
+          nautilusTrackLine = L.featureGroup(splitAtAntimeridian(latlngs).map(s => L.polyline(s, { color: '#29b6f6', weight: 2, opacity: 0.5, dashArray: '5 5' })));
+          if (vesselsVisible) nautilusTrackLine.addTo(map);
           document.getElementById('n-track-info').textContent =
             `Track: cruise ${a.cruise} · ${latlngs.length} points`;
           checkTrackZones(latlngs, 'EV Nautilus', `${a.cruise}`, null, null, true);
@@ -1492,8 +1583,9 @@ async function fetchVesselData() {
     document.getElementById('vessel-dot').className = 'vessel-dot' + (ageMin > 10 ? ' stale' : '');
 
     if (!vesselMarker) {
-      vesselMarker = L.marker([pos.latitude, pacificLon(pos.longitude)], { icon: vesselIcon, zIndexOffset: 9999 }).addTo(map);
+      vesselMarker = L.marker([pos.latitude, pacificLon(pos.longitude)], { icon: vesselIcon, zIndexOffset: 9999 });
       vesselMarker.bindPopup('<b>R/V Falkor (too)</b>');
+      if (vesselsVisible) vesselMarker.addTo(map);
     } else {
       vesselMarker.setLatLng([pos.latitude, pacificLon(pos.longitude)]);
     }
@@ -1511,7 +1603,8 @@ async function fetchVesselData() {
         .map(v => [v.latitude, v.longitude]);
 
       if (trackLine) trackLine.remove();
-      trackLine = L.featureGroup(splitAtAntimeridian(pts).map(s => L.polyline(s, { color: '#ff9800', weight: 2, opacity: 0.5, dashArray: '5 5' }))).addTo(map);
+      trackLine = L.featureGroup(splitAtAntimeridian(pts).map(s => L.polyline(s, { color: '#ff9800', weight: 2, opacity: 0.5, dashArray: '5 5' })));
+      if (vesselsVisible) trackLine.addTo(map);
       const hours = Math.round(pts.length / 60 * 10) / 10;
       document.getElementById('track-info').textContent =
         `Track: ${pts.length} pts · ~${hours}h of recent history`;
@@ -3092,8 +3185,9 @@ async function fetchOkeanosData() {
     dot.removeAttribute('style');
 
     if (!okeanosMarker) {
-      okeanosMarker = L.marker([a.lat, pacificLon(a.lon)], { icon: okeanosIcon, zIndexOffset: 9997 }).addTo(map);
+      okeanosMarker = L.marker([a.lat, pacificLon(a.lon)], { icon: okeanosIcon, zIndexOffset: 9997 });
       okeanosMarker.bindPopup('<b>NOAA Ship Okeanos Explorer</b>');
+      if (vesselsVisible) okeanosMarker.addTo(map);
     } else {
       okeanosMarker.setLatLng([a.lat, pacificLon(a.lon)]);
     }
@@ -3106,7 +3200,8 @@ async function fetchOkeanosData() {
       if (feat?.geometry?.paths) {
         const pts = feat.geometry.paths.flatMap(p => p.map(([lon, lat]) => [lat, lon]));
         if (okeanosTrackLine) okeanosTrackLine.remove();
-        okeanosTrackLine = L.featureGroup(splitAtAntimeridian(pts).map(s => L.polyline(s, { color: '#4caf50', weight: 2, opacity: 0.5, dashArray: '5 5' }))).addTo(map);
+        okeanosTrackLine = L.featureGroup(splitAtAntimeridian(pts).map(s => L.polyline(s, { color: '#4caf50', weight: 2, opacity: 0.5, dashArray: '5 5' })));
+        if (vesselsVisible) okeanosTrackLine.addTo(map);
         document.getElementById('o-track-info').textContent =
           `Track: ${pts.length} points — cruise ${feat.attributes.cruise_id}`;
         checkTrackZones(pts, 'NOAA Ship Okeanos Explorer', feat.attributes.cruise_id, null, null, true);
@@ -3244,7 +3339,8 @@ function addTargetMarker(z) {
   const t = explorationTargets[z.name];
   if (!t) return;
   if (targetMarkers[z.name]) { targetMarkers[z.name].remove(); }
-  const m = L.marker([z.lat, pacificLon(z.lon)], { icon: targetMarkerIcon(t.status), zIndexOffset: 5000 }).addTo(map);
+  const m = L.marker([z.lat, pacificLon(z.lon)], { icon: targetMarkerIcon(t.status), zIndexOffset: 5000 });
+  if (goalMarkersVisible) m.addTo(map);
   m.on('click', function(e) {
     L.DomEvent.stopPropagation(e);
     zonePopup.setLatLng([z.lat, pacificLon(z.lon)]).setContent(buildZonePopupContent(z)).openOn(map);
@@ -3572,7 +3668,7 @@ function toggleExGoals() {
   btn.style.background  = exGoalsVisible ? '#004D64' : '#0E2446';
   btn.style.borderColor = exGoalsVisible ? '#41B9C3' : '#187D8B';
   btn.querySelector('svg').setAttribute('stroke', exGoalsVisible ? '#41B9C3' : '#4a6070');
-  document.getElementById('exgoal-color-ctrl').style.display = exGoalsVisible ? 'flex' : 'none';
+  if (exGoalsVisible) showColorCtrl('exgoal-color-ctrl'); else document.getElementById('exgoal-color-ctrl').style.display = 'none';
 }
 
 let historicDivesData   = null;
@@ -3646,7 +3742,7 @@ async function toggleHistoricDives() {
   historicDivesActive = true;
   document.getElementById('legend-historic-dives-group').style.display = '';
   document.querySelectorAll('[data-historic-dive-legend]').forEach(el => el.style.display = '');
-  document.getElementById('historic-color-ctrl').style.display = 'flex';
+  showColorCtrl('historic-color-ctrl');
 }
 
 // ── ODL Internal Dives Layer ─────────────────────────────────────────────────
@@ -3732,7 +3828,7 @@ async function toggleODLDives() {
   odlDivesActive = true;
   document.getElementById('legend-odl-dives-group').style.display = '';
   document.querySelectorAll('[data-odl-dive-legend]').forEach(el => el.style.display = '');
-  document.getElementById('odl-dives-color-ctrl').style.display = 'flex';
+  showColorCtrl('odl-dives-color-ctrl');
 }
 
 // ── ODL Cleaned Dives Layer ──────────────────────────────────────────────────
@@ -3823,7 +3919,7 @@ async function toggleODLCleaned() {
   odlCleanedActive = true;
   document.getElementById('legend-odl-cleaned-group').style.display = '';
   document.querySelectorAll('[data-odl-cleaned-legend]').forEach(el => el.style.display = '');
-  document.getElementById('odl-cleaned-color-ctrl').style.display = 'flex';
+  showColorCtrl('odl-cleaned-color-ctrl');
   if (advBuilt) buildDivesFilters();
 }
 
