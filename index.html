@@ -1574,7 +1574,7 @@ async function fetchNautilusData() {
 
     if (!nautilusMarker) {
       nautilusMarker = L.marker([a.latitude, pacificLon(a.longitude)], { icon: nautilusIcon, zIndexOffset: 9998 });
-      nautilusMarker.bindPopup('<b>EV Nautilus</b>');
+      nautilusMarker.on('click', () => centerOnNautilus());
       if (vesselsVisible) nautilusMarker.addTo(map);
     } else {
       nautilusMarker.setLatLng([a.latitude, pacificLon(a.longitude)]);
@@ -1643,7 +1643,7 @@ async function fetchVesselData() {
 
     if (!vesselMarker) {
       vesselMarker = L.marker([pos.latitude, pacificLon(pos.longitude)], { icon: vesselIcon, zIndexOffset: 9999 });
-      vesselMarker.bindPopup('<b>R/V Falkor (too)</b>');
+      vesselMarker.on('click', () => centerOnVessel());
       if (vesselsVisible) vesselMarker.addTo(map);
     } else {
       vesselMarker.setLatLng([pos.latitude, pacificLon(pos.longitude)]);
@@ -3245,7 +3245,7 @@ async function fetchOkeanosData() {
 
     if (!okeanosMarker) {
       okeanosMarker = L.marker([a.lat, pacificLon(a.lon)], { icon: okeanosIcon, zIndexOffset: 9997 });
-      okeanosMarker.bindPopup('<b>NOAA Ship Okeanos Explorer</b>');
+      okeanosMarker.on('click', () => centerOnOkeanos());
       if (vesselsVisible) okeanosMarker.addTo(map);
     } else {
       okeanosMarker.setLatLng([a.lat, pacificLon(a.lon)]);
@@ -3336,7 +3336,7 @@ async function fetchAtlantisData() {
 
     if (!atlantisMarker) {
       atlantisMarker = L.marker([d.lat, pacificLon(d.lon)], { icon: atlantisIcon, zIndexOffset: 9996 });
-      atlantisMarker.bindPopup('<b>R/V Atlantis</b><br><span style="font-size:10px;color:#aaa;">WHOI</span>');
+      atlantisMarker.on('click', () => centerOnAtlantis());
       if (vesselsVisible) atlantisMarker.addTo(map);
     } else {
       atlantisMarker.setLatLng([d.lat, pacificLon(d.lon)]);
@@ -3423,7 +3423,7 @@ async function fetchOceanXplorerData() {
 
     if (!oceanxMarker) {
       oceanxMarker = L.marker([d.lat, pacificLon(d.lon)], { icon: oceanxIcon, zIndexOffset: 9995 });
-      oceanxMarker.bindPopup('<b>OceanXplorer</b><br><span style="font-size:10px;color:#aaa;">OceanX</span>');
+      oceanxMarker.on('click', () => centerOnOceanXplorer());
       if (vesselsVisible) oceanxMarker.addTo(map);
     } else {
       oceanxMarker.setLatLng([d.lat, pacificLon(d.lon)]);
