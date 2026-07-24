@@ -97,7 +97,7 @@
   .info-icon:hover .info-tip { opacity:1; }
   .subsection-label { display:flex; align-items:center; gap:7px; font-size:10px; font-weight:700; color:#41B9C3; letter-spacing:1.2px; text-transform:uppercase; margin:12px 0 8px; }
   .vs-name { font-size:14px; font-weight:800; letter-spacing:0.3px; text-transform:none; }
-  .sec-nav { display:flex; gap:3px; padding:7px 10px; background:#041018; border-bottom:1px solid #187D8B; position:sticky; top:0; z-index:20; flex-shrink:0; }
+  .sec-nav { display:flex; flex-wrap:wrap; gap:3px; padding:7px 10px; background:#041018; border-bottom:1px solid #187D8B; position:sticky; top:0; z-index:20; flex-shrink:0; }
   .sec-nav-btn { flex:1; text-align:center; padding:5px 2px; font-size:9px; font-weight:700; letter-spacing:0.4px; text-transform:uppercase; text-decoration:none; border-radius:4px; background:#0A1A2E; border:1px solid #187D8B; cursor:pointer; }
   .sec-nav-btn:hover { background:#187D8B !important; color:#fff !important; }
   .subsection-divider { height:1px; background:rgba(65,185,195,0.15); margin:12px 0 0; }
@@ -118,6 +118,9 @@
       <div class="sec-nav-btn" style="color:#ff9800;" onclick="navTo('sec-falkor')"><i>Falkor (too)</i></div>
       <div class="sec-nav-btn" style="color:#29b6f6;" onclick="navTo('sec-nautilus')">E/V <i>Nautilus</i></div>
       <div class="sec-nav-btn" style="color:#4caf50;" onclick="navTo('sec-okeanos')"><i>Okeanos Explorer</i></div>
+      <div class="sec-nav-btn" style="color:#e91e63;" onclick="navTo('sec-atlantis')">R/V <i>Atlantis</i></div>
+      <div style="flex-basis:100%;height:0;margin:0;padding:0;"></div>
+      <div class="sec-nav-btn" style="color:#9c27b0;" onclick="navTo('sec-oceanxplorer')"><i>Ocean<br>Xplorer</i></div>
       <div class="sec-nav-btn" style="color:#81e1e7;" onclick="navTo('sec-verify')">Verify Points</div>
       <div class="sec-nav-btn" style="color:#FFB300;" onclick="navTo('sec-targets')">Goals in Progress</div>
     </div>
@@ -329,6 +332,51 @@
       </div><!-- /grey wrapper okeanos -->
     </div><!-- /vessel-section-body okeanos -->
   </div><!-- /vessel-section okeanos -->
+
+  <div class="vessel-section" id="sec-atlantis">
+    <div class="vessel-section-hdr" style="background:linear-gradient(90deg,rgba(233,30,99,0.12) 0%,transparent 100%);border-bottom:1px solid rgba(233,30,99,0.2);">
+      <div class="vs-pip" style="background:#e91e63;box-shadow:0 0 6px #e91e63;"></div>
+      <span class="vs-name" style="color:#e91e63;">R/V <i>Atlantis</i></span>
+      <span style="margin-left:auto;font-size:9px;font-weight:400;color:#41B9C3;letter-spacing:0;">WHOI</span>
+    </div>
+    <div class="vessel-section-body">
+      <div class="subsection-label"><div class="vessel-dot" id="at-dot"></div>Live Position</div>
+      <div class="data-grid">
+        <div class="data-item"><div class="data-label">Latitude</div><div class="data-value" id="at-lat">—</div></div>
+        <div class="data-item"><div class="data-label">Longitude</div><div class="data-value" id="at-lon">—</div></div>
+        <div class="data-item"><div class="data-label">Last Update</div><div class="data-value" id="at-ts" style="font-size:9px;">—</div></div>
+      </div>
+      <div id="at-error-msg" style="color:#ff6666;font-size:11px;margin-top:8px;display:none"></div>
+      <button class="btn" onclick="centerOnAtlantis()"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="14" viewBox="0 0 24 28" fill="currentColor" style="vertical-align:-2px;margin-right:5px;flex-shrink:0;"><path d="M12 0C7.6 0 4 3.6 4 8c0 6 8 16 8 16s8-10 8-16c0-4.4-3.6-8-8-8zm0 11a3 3 0 1 1 0-6 3 3 0 0 1 0 6z"/></svg>Center on <i>Atlantis</i></button>
+      <div class="subsection-divider"></div>
+      <div class="subsection-label" onclick="toggleHits('at')" style="cursor:pointer;user-select:none;">Zone Intersections<span id="at-hit-count" style="color:#e040fb;font-weight:400;letter-spacing:0;text-transform:none;font-size:10px;margin-left:6px;"></span><span id="at-hit-arrow" style="margin-left:auto;">▼</span></div>
+      <div id="at-hit-list" style="display:none;max-height:260px;overflow-y:auto;padding-bottom:4px;"></div>
+    </div>
+  </div><!-- /vessel-section atlantis -->
+
+  <div class="vessel-section" id="sec-oceanxplorer">
+    <div class="vessel-section-hdr" style="background:linear-gradient(90deg,rgba(156,39,176,0.12) 0%,transparent 100%);border-bottom:1px solid rgba(156,39,176,0.2);">
+      <div class="vs-pip" style="background:#9c27b0;box-shadow:0 0 6px #9c27b0;"></div>
+      <span class="vs-name" style="color:#9c27b0;"><i>OceanXplorer</i></span>
+      <span style="margin-left:auto;font-size:9px;font-weight:400;color:#41B9C3;letter-spacing:0;">OceanX</span>
+    </div>
+    <div class="vessel-section-body">
+      <div class="subsection-label"><div class="vessel-dot" id="ox-dot"></div>Live Position</div>
+      <div class="data-grid">
+        <div class="data-item"><div class="data-label">Latitude</div><div class="data-value" id="ox-lat">—</div></div>
+        <div class="data-item"><div class="data-label">Longitude</div><div class="data-value" id="ox-lon">—</div></div>
+        <div class="data-item"><div class="data-label">Speed (kn)</div><div class="data-value" id="ox-speed">—</div></div>
+        <div class="data-item"><div class="data-label">Course</div><div class="data-value" id="ox-course">—</div></div>
+        <div class="data-item"><div class="data-label">Location</div><div class="data-value" id="ox-location" style="font-size:9px;">—</div></div>
+        <div class="data-item"><div class="data-label">Last Update</div><div class="data-value" id="ox-ts" style="font-size:9px;">—</div></div>
+      </div>
+      <div id="ox-error-msg" style="color:#ff6666;font-size:11px;margin-top:8px;display:none"></div>
+      <button class="btn" onclick="centerOnOceanXplorer()"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="14" viewBox="0 0 24 28" fill="currentColor" style="vertical-align:-2px;margin-right:5px;flex-shrink:0;"><path d="M12 0C7.6 0 4 3.6 4 8c0 6 8 16 8 16s8-10 8-16c0-4.4-3.6-8-8-8zm0 11a3 3 0 1 1 0-6 3 3 0 0 1 0 6z"/></svg>Center on <i>OceanXplorer</i></button>
+      <div class="subsection-divider"></div>
+      <div class="subsection-label" onclick="toggleHits('ox')" style="cursor:pointer;user-select:none;">Zone Intersections<span id="ox-hit-count" style="color:#e040fb;font-weight:400;letter-spacing:0;text-transform:none;font-size:10px;margin-left:6px;"></span><span id="ox-hit-arrow" style="margin-left:auto;">▼</span></div>
+      <div id="ox-hit-list" style="display:none;max-height:260px;overflow-y:auto;padding-bottom:4px;"></div>
+    </div>
+  </div><!-- /vessel-section oceanxplorer -->
 
   <div class="verify-section" id="sec-verify">
     <div class="verify-hdr">
@@ -710,7 +758,7 @@
 <script src="https://cdn.jsdelivr.net/npm/leaflet-velocity@2.1.1/dist/leaflet-velocity.min.js"></script>
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-  import { getFirestore, collection, doc, onSnapshot, setDoc, deleteDoc, updateDoc, arrayUnion, arrayRemove, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+  import { getFirestore, collection, doc, onSnapshot, setDoc, deleteDoc, updateDoc, arrayUnion, arrayRemove, addDoc, serverTimestamp, query, orderBy, limit, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
   import { getStorage, ref, uploadBytesResumable, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js";
 
   const firebaseConfig = {
@@ -727,6 +775,8 @@
   const storage = getStorage(fbApp);
   const goalsCol = collection(db, 'explorationGoals');
   const savedSearchesCol = collection(db, 'savedSearches');
+  const atlantisTrackCol = collection(db, 'vessel_tracks/atlantis/points');
+  const oceanxTrackCol   = collection(db, 'vessel_tracks/oceanxplorer/points');
 
   // Live-sync saved searches into global array
   window._savedSearches = [];
@@ -1118,6 +1168,12 @@ function toggleVessels() {
   // Okeanos
   if (okeanosMarker)     { vesselsVisible ? okeanosMarker.addTo(map)     : okeanosMarker.remove(); }
   if (okeanosTrackLine)  { vesselsVisible ? okeanosTrackLine.addTo(map)  : okeanosTrackLine.remove(); }
+  // Atlantis
+  if (atlantisMarker)    { vesselsVisible ? atlantisMarker.addTo(map)    : atlantisMarker.remove(); }
+  if (atlantisTrackLine) { vesselsVisible ? atlantisTrackLine.addTo(map) : atlantisTrackLine.remove(); }
+  // OceanXplorer
+  if (oceanxMarker)      { vesselsVisible ? oceanxMarker.addTo(map)      : oceanxMarker.remove(); }
+  if (oceanxTrackLine)   { vesselsVisible ? oceanxTrackLine.addTo(map)   : oceanxTrackLine.remove(); }
   const btn = document.getElementById('vessels-btn');
   if (btn) {
     btn.style.opacity = vesselsVisible ? '1' : '0.45';
@@ -3221,6 +3277,176 @@ async function fetchOkeanosData() {
 fetchOkeanosData();
 setInterval(fetchOkeanosData, 60000);
 
+
+
+// ── R/V Atlantis (WHOI) ───────────────────────────────────────────────────────
+const atlantisIcon = L.divIcon({
+  className: '',
+  html: '<div style="width:18px;height:18px;background:#e91e63;border:3px solid #fff;border-radius:50%;box-shadow:0 0 14px #e91e63,0 0 4px rgba(0,0,0,0.8);"></div>',
+  iconSize: [18, 18], iconAnchor: [9, 9]
+});
+
+let atlantisMarker = null;
+let atlantisTrackLine = null;
+let atlantisTrackPts = [];
+let atlantisPos = null;
+let _atlantisLastRecordedTs = null;
+
+function centerOnAtlantis() {
+  if (atlantisPos) map.setView([atlantisPos.lat, pacificLon(atlantisPos.lon)], 10);
+}
+
+function _drawAtlantisTrack() {
+  if (atlantisTrackLine) atlantisTrackLine.remove();
+  if (atlantisTrackPts.length < 2) return;
+  const latlngs = atlantisTrackPts.map(p => [p.lat, pacificLon(p.lon)]);
+  atlantisTrackLine = L.featureGroup(
+    splitAtAntimeridian(latlngs).map(s => L.polyline(s, { color: '#e91e63', weight: 2, opacity: 0.5, dashArray: '5 5' }))
+  );
+  if (vesselsVisible) atlantisTrackLine.addTo(map);
+}
+
+async function loadAtlantisHistory() {
+  try {
+    const snap = await getDocs(query(atlantisTrackCol, orderBy('ts', 'asc'), limit(2000)));
+    atlantisTrackPts = snap.docs.map(d => d.data());
+    _drawAtlantisTrack();
+  } catch (e) { console.warn('Atlantis history load failed:', e); }
+}
+
+async function fetchAtlantisData() {
+  try {
+    const r = await fetch('/api/atlantis-position');
+    if (r.status === 204) return;
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    const d = await r.json();
+
+    atlantisPos = { lat: d.lat, lon: d.lon };
+    document.getElementById('at-lat').textContent = d.lat.toFixed(5) + '°';
+    document.getElementById('at-lon').textContent = d.lon.toFixed(5) + '°';
+    document.getElementById('at-ts').textContent  = d.timestamp ?? '—';
+    document.getElementById('at-error-msg').style.display = 'none';
+
+    const dot = document.getElementById('at-dot');
+    dot.className = 'vessel-dot';
+    dot.removeAttribute('style');
+
+    if (!atlantisMarker) {
+      atlantisMarker = L.marker([d.lat, pacificLon(d.lon)], { icon: atlantisIcon, zIndexOffset: 9996 });
+      atlantisMarker.bindPopup('<b>R/V Atlantis</b><br><span style="font-size:10px;color:#aaa;">WHOI</span>');
+      if (vesselsVisible) atlantisMarker.addTo(map);
+    } else {
+      atlantisMarker.setLatLng([d.lat, pacificLon(d.lon)]);
+    }
+
+    // Record to Firestore only when position changes (avoid duplicate writes)
+    const tsKey = d.timestamp ?? `${d.lat.toFixed(4)},${d.lon.toFixed(4)}`;
+    if (tsKey !== _atlantisLastRecordedTs) {
+      _atlantisLastRecordedTs = tsKey;
+      try {
+        await addDoc(atlantisTrackCol, { lat: d.lat, lon: d.lon, ts: serverTimestamp(), src_ts: d.timestamp ?? null });
+        atlantisTrackPts.push({ lat: d.lat, lon: d.lon });
+        _drawAtlantisTrack();
+      } catch (e) { console.warn('Atlantis track write failed:', e); }
+    }
+
+    checkZones(d.lat, d.lon, 'Atlantis');
+  } catch (err) {
+    const el = document.getElementById('at-error-msg');
+    el.textContent = 'Fetch error: ' + err.message;
+    el.style.display = 'block';
+  }
+}
+
+loadAtlantisHistory().then(() => fetchAtlantisData());
+setInterval(fetchAtlantisData, 300000);
+
+
+
+// ── OceanXplorer (OceanX) ─────────────────────────────────────────────────────
+const oceanxIcon = L.divIcon({
+  className: '',
+  html: '<div style="width:18px;height:18px;background:#9c27b0;border:3px solid #fff;border-radius:50%;box-shadow:0 0 14px #9c27b0,0 0 4px rgba(0,0,0,0.8);"></div>',
+  iconSize: [18, 18], iconAnchor: [9, 9]
+});
+
+let oceanxMarker = null;
+let oceanxTrackLine = null;
+let oceanxTrackPts = [];
+let oceanxPos = null;
+let _oceanxLastRecordedTs = null;
+
+function centerOnOceanXplorer() {
+  if (oceanxPos) map.setView([oceanxPos.lat, pacificLon(oceanxPos.lon)], 10);
+}
+
+function _drawOceanXTrack() {
+  if (oceanxTrackLine) oceanxTrackLine.remove();
+  if (oceanxTrackPts.length < 2) return;
+  const latlngs = oceanxTrackPts.map(p => [p.lat, pacificLon(p.lon)]);
+  oceanxTrackLine = L.featureGroup(
+    splitAtAntimeridian(latlngs).map(s => L.polyline(s, { color: '#9c27b0', weight: 2, opacity: 0.5, dashArray: '5 5' }))
+  );
+  if (vesselsVisible) oceanxTrackLine.addTo(map);
+}
+
+async function loadOceanXHistory() {
+  try {
+    const snap = await getDocs(query(oceanxTrackCol, orderBy('ts', 'asc'), limit(2000)));
+    oceanxTrackPts = snap.docs.map(d => d.data());
+    _drawOceanXTrack();
+  } catch (e) { console.warn('OceanXplorer history load failed:', e); }
+}
+
+async function fetchOceanXplorerData() {
+  try {
+    const r = await fetch('/api/oceanxplorer-position');
+    if (r.status === 204) return;
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    const d = await r.json();
+
+    oceanxPos = { lat: d.lat, lon: d.lon };
+    document.getElementById('ox-lat').textContent      = d.lat.toFixed(5) + '°';
+    document.getElementById('ox-lon').textContent      = d.lon.toFixed(5) + '°';
+    document.getElementById('ox-speed').textContent    = d.speed != null ? d.speed.toFixed(1) : '—';
+    document.getElementById('ox-course').textContent   = d.course != null ? d.course.toFixed(1) + '°' : '—';
+    document.getElementById('ox-location').textContent = d.location ?? '—';
+    document.getElementById('ox-ts').textContent       = d.timestamp ?? '—';
+    document.getElementById('ox-error-msg').style.display = 'none';
+
+    const dot = document.getElementById('ox-dot');
+    dot.className = 'vessel-dot';
+    dot.removeAttribute('style');
+
+    if (!oceanxMarker) {
+      oceanxMarker = L.marker([d.lat, pacificLon(d.lon)], { icon: oceanxIcon, zIndexOffset: 9995 });
+      oceanxMarker.bindPopup('<b>OceanXplorer</b><br><span style="font-size:10px;color:#aaa;">OceanX</span>');
+      if (vesselsVisible) oceanxMarker.addTo(map);
+    } else {
+      oceanxMarker.setLatLng([d.lat, pacificLon(d.lon)]);
+    }
+
+    // Record to Firestore only when position/timestamp changes
+    const tsKey = d.timestamp ?? `${d.lat.toFixed(4)},${d.lon.toFixed(4)}`;
+    if (tsKey !== _oceanxLastRecordedTs) {
+      _oceanxLastRecordedTs = tsKey;
+      try {
+        await addDoc(oceanxTrackCol, { lat: d.lat, lon: d.lon, ts: serverTimestamp(), src_ts: d.timestamp ?? null });
+        oceanxTrackPts.push({ lat: d.lat, lon: d.lon });
+        _drawOceanXTrack();
+      } catch (e) { console.warn('OceanXplorer track write failed:', e); }
+    }
+
+    checkZones(d.lat, d.lon, 'OceanXplorer');
+  } catch (err) {
+    const el = document.getElementById('ox-error-msg');
+    el.textContent = 'Fetch error: ' + err.message;
+    el.style.display = 'block';
+  }
+}
+
+loadOceanXHistory().then(() => fetchOceanXplorerData());
+setInterval(fetchOceanXplorerData, 300000);
 
 
 
