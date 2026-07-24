@@ -1148,6 +1148,9 @@ function toggleGoalMarkers() {
   for (const m of Object.values(targetMarkers)) {
     goalMarkersVisible ? m.addTo(map) : m.remove();
   }
+  for (const m of Object.values(diveMarkers)) {
+    goalMarkersVisible ? m.addTo(map) : m.remove();
+  }
   const btn = document.getElementById('goal-markers-btn');
   if (btn) {
     btn.style.opacity = goalMarkersVisible ? '1' : '0.45';
@@ -3684,7 +3687,8 @@ function updateDiveMarker(zoneName) {
     html: `<div style="width:12px;height:12px;border-radius:50%;background:#00e5ff;border:2px solid #fff;box-shadow:0 0 6px #00e5ff;"></div>`,
     iconSize: [12, 12], iconAnchor: [6, 6]
   });
-  const m = L.marker([lat, pacificLon(lon)], { icon, zIndexOffset: 8000 }).addTo(map);
+  const m = L.marker([lat, pacificLon(lon)], { icon, zIndexOffset: 8000 });
+  if (goalMarkersVisible) m.addTo(map);
   m.bindTooltip(`<b>Actual Dive</b><br>${zoneName}<br>${lat.toFixed(5)}°, ${lon.toFixed(5)}°`, { direction: 'top', offset: [0, -8] });
   diveMarkers[zoneName] = m;
 }
