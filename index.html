@@ -3342,8 +3342,8 @@ async function fetchAtlantisData() {
       atlantisMarker.setLatLng([d.lat, pacificLon(d.lon)]);
     }
 
-    // Record to Firestore only when position changes (avoid duplicate writes)
-    const tsKey = d.timestamp ?? `${d.lat.toFixed(4)},${d.lon.toFixed(4)}`;
+    // Record to Firestore only when position changes (use lat/lon, not timestamp — KML often returns stale timestamps)
+    const tsKey = `${d.lat.toFixed(4)},${d.lon.toFixed(4)}`;
     if (tsKey !== _atlantisLastRecordedTs) {
       _atlantisLastRecordedTs = tsKey;
       try {
@@ -3429,8 +3429,8 @@ async function fetchOceanXplorerData() {
       oceanxMarker.setLatLng([d.lat, pacificLon(d.lon)]);
     }
 
-    // Record to Firestore only when position/timestamp changes
-    const tsKey = d.timestamp ?? `${d.lat.toFixed(4)},${d.lon.toFixed(4)}`;
+    // Record to Firestore only when position changes (use lat/lon, not timestamp — AIS feeds often return stale timestamps)
+    const tsKey = `${d.lat.toFixed(4)},${d.lon.toFixed(4)}`;
     if (tsKey !== _oceanxLastRecordedTs) {
       _oceanxLastRecordedTs = tsKey;
       try {
