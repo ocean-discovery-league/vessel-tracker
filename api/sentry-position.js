@@ -13,10 +13,10 @@ export default async function handler(req, res) {
       body: JSON.stringify({
         queries: [{
           datasource: DS,
-          query: `from(bucket: "nautilus") |> range(start: -2h) |> filter(fn: (r) => r["_measurement"] == "sonardyne_nav") |> pivot(rowKey:["_time"], columnKey:["_field"], valueColumn:"_value") |> filter(fn: (r) => r["name"] == "Sntry 5206") |> last(column: "_time")`,
+          query: `from(bucket: "nautilus") |> range(start: -24h) |> filter(fn: (r) => r["_measurement"] == "sonardyne_nav") |> pivot(rowKey:["_time"], columnKey:["_field"], valueColumn:"_value") |> filter(fn: (r) => r["name"] == "Sntry 5206") |> last(column: "_time")`,
           refId: 'A'
         }],
-        from: 'now-2h',
+        from: 'now-24h',
         to: 'now'
       })
     });
