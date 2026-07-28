@@ -1516,7 +1516,11 @@ function updateROVDisplay(data) {
   document.getElementById('n-rov-sal').textContent   = fmt(data.sal,   1, ' PSU');
   document.getElementById('n-rov-o2').textContent    = fmt(data.o2,    1, '%');
 
-  if (data.lat != null && data.lon != null) {
+  const diveStatus = (document.getElementById('n-dive')?.textContent || '').toLowerCase();
+  const rovInWater = diveStatus && !diveStatus.includes('—') && !diveStatus.includes('on deck')
+    && !diveStatus.includes('transit') && !diveStatus.includes('surface') && !diveStatus.includes('stowed');
+
+  if (rovInWater && data.lat != null && data.lon != null) {
     if (!herculesMarker) {
       herculesMarker = L.marker([data.lat, pacificLon(data.lon)], { icon: herculesIcon, zIndexOffset: 8600 });
       herculesMarker.bindTooltip('<b>ROV Hercules</b>', { permanent: false, direction: 'top', offset: [0, -8] });
@@ -1525,6 +1529,9 @@ function updateROVDisplay(data) {
     } else {
       herculesMarker.setLatLng([data.lat, pacificLon(data.lon)]);
     }
+  } else if (herculesMarker) {
+    herculesMarker.remove();
+    herculesMarker = null;
   }
 }
 
