@@ -292,6 +292,7 @@
       <button class="btn" onclick="clearROVDiveTracks()" style="background:#0a1929;border-color:#187D8B;color:#41B9C3;">✕ Clear Dive Tracks</button>
       <div id="rov-dive-info" class="track-info"></div>
       <div id="rov-dive-error" style="color:#ff6666;font-size:11px;margin-top:6px;display:none;"></div>
+      <button class="btn" id="rov-dive-csv-btn" onclick="downloadLoadedTrackCSV()" style="display:none;background:#0a1929;border-color:#ffeb3b;color:#ffeb3b;font-size:10px;margin-top:4px;">⬇ Download loaded track as CSV</button>
       <div style="margin-top:10px;font-size:9px;color:#5a7080;text-transform:uppercase;letter-spacing:0.8px;margin-bottom:5px;">Download Local Archive as CSV</div>
       <div style="display:flex;flex-direction:column;gap:4px;">
         <button class="btn" onclick="exportVehicleTrackCSV('hercules','ROV_Hercules')" style="background:#0a1929;border-color:#ffeb3b;color:#ffeb3b;font-size:10px;">⬇ ROV Hercules</button>
@@ -1337,22 +1338,27 @@ function haversineM(lat1, lon1, lat2, lon2) {
 }
 
 // Track active zone hits per vessel so both can trigger alerts independently
-const vesselZoneHits = { Falkor: [], Nautilus: [], Okeanos: [] };
+const vesselZoneHits = { Falkor: [], Nautilus: [], Okeanos: [], Atlantis: [], OceanXplorer: [], 'AUV Sentry': [], 'ROV Hercules': [], 'ROV Little Hercules': [] };
+const vesselDisplayNames = {
+  Falkor: 'R/V Falkor (too)', Nautilus: 'EV Nautilus', Okeanos: 'NOAA Ship Okeanos Explorer',
+  Atlantis: 'R/V Atlantis', OceanXplorer: 'OceanXplorer',
+  'AUV Sentry': 'AUV Sentry', 'ROV Hercules': 'ROV Hercules', 'ROV Little Hercules': 'ROV Little Hercules'
+};
 
 function checkZones(lat, lon, vesselName) {
   const nearby = [];
-  for (const z of zoneData) {
-    const d = haversineM(lat, lon, z.lat, z.lon);
-    if (d <= 5000) nearby.push({ ...z, d });
+  if (lat != null && lon != null) {
+    for (const z of zoneData) {
+      const d = haversineM(lat, lon, z.lat, z.lon);
+      if (d <= 5000) nearby.push({ ...z, d });
+    }
   }
   vesselZoneHits[vesselName] = nearby;
 
   // Rebuild alert from all vessels
-  const allHits = [
-    ...vesselZoneHits.Falkor.map(z => ({ ...z, vessel: 'R/V Falkor (too)' })),
-    ...vesselZoneHits.Nautilus.map(z => ({ ...z, vessel: 'EV Nautilus' })),
-    ...vesselZoneHits.Okeanos.map(z => ({ ...z, vessel: 'NOAA Ship Okeanos Explorer' })),
-  ];
+  const allHits = Object.entries(vesselZoneHits).flatMap(([key, hits]) =>
+    hits.map(z => ({ ...z, vessel: vesselDisplayNames[key] ?? key }))
+  );
 
   // Reset zone styles (preserve historical + track + near-miss highlights), then re-highlight live hits
   for (const z of zoneData) {
@@ -1655,29 +1661,21 @@ async function pollROVDisplay() {
 
 async function checkROVZone() {
   const diveStatus = (document.getElementById('n-dive')?.textContent || '').toLowerCase().trim();
-  // "off deck" = ROV deployed and in water
-  if (!diveStatus || diveStatus === '—' || diveStatus.includes('on deck') || diveStatus.includes('transit') || diveStatus.includes('stowed')) return;
+  if (!diveStatus || diveStatus === '—' || diveStatus.includes('on deck') || diveStatus.includes('transit') || diveStatus.includes('stowed')) {
+    // ROV not deployed — clear its zone hits
+    const rovName = _activeROV ? (ROV_DISPLAY_NAMES[_activeROV] ?? 'ROV Hercules') : 'ROV Hercules';
+    vesselZoneHits[rovName] = [];
+    checkZones(null, null, rovName);  // trigger allHits rebuild with empty hits
+    return;
+  }
 
   try {
     const data = await fetchROVData();
     if (!data) return;
     const { lat, lon } = data;
     if (lat == null || lon == null) return;
-
-    for (const z of zoneData) {
-      if (haversineM(lat, lon, z.lat, z.lon) <= ROV_ZONE_RADIUS_M) {
-        const rovCoords = `${lat.toFixed(5)}°, ${lon.toFixed(5)}°`;
-        zoneNotify(
-          `ROV DIVE IN ZONE — ${z.name}`,
-          `ROV Hercules is actively diving inside zone ${z.name}\nROV position: ${rovCoords}\nDive status: ${document.getElementById('n-dive').textContent}`,
-          '#e53935',
-          'ROV Nautilus (Hercules)',
-          z.name,
-          z
-        );
-        break;
-      }
-    }
+    const rovName = _activeROV ? (ROV_DISPLAY_NAMES[_activeROV] ?? 'ROV Hercules') : 'ROV Hercules';
+    checkZones(lat, lon, rovName);
   } catch(e) {}
 }
 
@@ -2314,20 +2312,46 @@ async function downloadNautilusArchive() {
   progText.textContent = 'Saving…';
   progBar.style.width  = '100%';
 
-  // Append vehicle tracks from Firestore
-  progText.textContent = 'Fetching vehicle tracks…';
+  // Fetch vehicle tracks: Firestore (live recording) + ArcGIS historical cruises
+  progText.textContent = 'Fetching vehicle tracks from Firestore…';
   const vehicles = {};
   const vehicleCols = { hercules: window._herculesTrackCol, little_hercules: window._lhTrackCol, sentry: window._sentryTrackCol };
   for (const [name, col] of Object.entries(vehicleCols)) {
     try {
       if (!col) continue;
-      const snap = await window._firestoreGetDocs(window._firestoreQuery(col, window._firestoreOrderBy('ts', 'asc'), window._firestoreLimit(50000)));
+      const snap = await window._firestoreGetDocs(window._firestoreQuery(col, window._firestoreOrderBy('ts', 'asc'), window._firestoreLimit(10000)));
       vehicles[name] = snap.docs.map(d => {
         const p = d.data();
         return { lat: +p.lat.toFixed(5), lon: +p.lon.toFixed(5), depth: p.depth != null ? +p.depth.toFixed(1) : null,
-                 ts: p.ts?.toDate ? p.ts.toDate().toISOString() : null };
+                 ts: p.ts?.toDate ? p.ts.toDate().toISOString() : null, src: 'firestore' };
       });
     } catch(e) { vehicles[name] = []; }
+  }
+
+  // Merge in ArcGIS historical tracks
+  progText.textContent = 'Fetching ArcGIS historical vehicle tracks…';
+  const ARCGIS_CRUISES = { hercules: [['Herc','NA138']], little_hercules: [['Herc (M1)','NA179'],['Herc (M1)','NA180']] };
+  for (const [name, cruiseList] of Object.entries(ARCGIS_CRUISES)) {
+    if (!vehicles[name]) vehicles[name] = [];
+    for (const [arcVehicle, cruise] of cruiseList) {
+      try {
+        progText.textContent = `Fetching ArcGIS ${arcVehicle} ${cruise}…`;
+        const url = `https://services9.arcgis.com/ci0kSsvh5NZiSvac/arcgis/rest/services/RT_Vehicle_Positions_and_Tracks_view/FeatureServer/2/query`
+          + `?where=vehicle%3D'${encodeURIComponent(arcVehicle)}'+AND+cruise%3D'${encodeURIComponent(cruise)}'`
+          + `&returnGeometry=true&outSR=4326&outFields=vehicle,cruise,dive&f=json`;
+        const r = await fetch(url);
+        if (!r.ok) continue;
+        const d = await r.json();
+        for (const feat of d.features ?? []) {
+          const diveName = feat.attributes?.dive ?? '';
+          for (const path of feat.geometry?.paths ?? []) {
+            for (const [lon, lat] of path) {
+              vehicles[name].push({ lat: +lat.toFixed(5), lon: +lon.toFixed(5), depth: null, ts: null, cruise, dive: diveName, src: 'arcgis' });
+            }
+          }
+        }
+      } catch(e) { /* skip failed cruise */ }
+    }
   }
 
   const payload = JSON.stringify({ version:2, vessel:'nautilus', generated: new Date().toISOString(),
@@ -3860,12 +3884,17 @@ document.getElementById('rov-dive-vehicle')?.addEventListener('change', function
   }
 });
 
+let _lastLoadedTrackPts = [];  // {lat, lon, depth, ts, cruise, dive} for CSV download
+
 async function loadROVDiveTrack() {
   const vehicle  = document.getElementById('rov-dive-vehicle').value;
   const cruise   = document.getElementById('rov-dive-cruise').value;
   const infoEl   = document.getElementById('rov-dive-info');
   const errEl    = document.getElementById('rov-dive-error');
+  const csvBtn   = document.getElementById('rov-dive-csv-btn');
   errEl.style.display = 'none';
+  csvBtn.style.display = 'none';
+  _lastLoadedTrackPts = [];
   if (!vehicle || !cruise) { errEl.textContent = 'Select a vehicle and cruise first.'; errEl.style.display = 'block'; return; }
 
   infoEl.textContent = 'Loading…';
@@ -3880,6 +3909,7 @@ async function loadROVDiveTrack() {
       const snap = await window._firestoreGetDocs(window._firestoreQuery(col, window._firestoreOrderBy('ts', 'asc'), window._firestoreLimit(10000)));
       const pts = snap.docs.map(d => d.data());
       if (!pts.length) { infoEl.textContent = 'No locally recorded points yet.'; return; }
+      _lastLoadedTrackPts = pts.map(p => ({ lat: p.lat, lon: p.lon, depth: p.depth ?? null, ts: p.ts?.toDate ? p.ts.toDate().toISOString() : '', cruise: 'local', dive: '' }));
       const latlngs = pts.map(p => [p.lat, pacificLon(p.lon)]);
       const tl = L.featureGroup(
         splitAtAntimeridian(latlngs).map(s => L.polyline(s, { color: '#ffeb3b', weight: 1.5, opacity: 0.6, dashArray: '4 4' }))
@@ -3888,6 +3918,7 @@ async function loadROVDiveTrack() {
       rovDiveTrackLines.push(tl);
       infoEl.textContent = `${vehicle} local: ${pts.length.toLocaleString()} pts`;
       if (pts.length) map.fitBounds(tl.getBounds(), { padding: [40, 40] });
+      csvBtn.style.display = 'block';
     } catch (e) {
       errEl.textContent = 'Error: ' + e.message;
       errEl.style.display = 'block';
@@ -3912,9 +3943,11 @@ async function loadROVDiveTrack() {
     const dives = new Set();
     for (const feat of features) {
       const paths = feat.geometry?.paths ?? [];
+      const diveName = feat.attributes?.dive ?? '';
       const latlngs = paths.flatMap(p => p.map(([lon, lat]) => [lat, lon]));
       totalPts += latlngs.length;
-      if (feat.attributes?.dive) dives.add(feat.attributes.dive);
+      if (diveName) dives.add(diveName);
+      latlngs.forEach(([lat, lon]) => _lastLoadedTrackPts.push({ lat, lon, depth: null, ts: '', cruise, dive: diveName }));
       const tl = L.featureGroup(
         splitAtAntimeridian(latlngs).map(s => L.polyline(s, { color: '#ffeb3b', weight: 1.5, opacity: 0.6, dashArray: '4 4' }))
       );
@@ -3923,6 +3956,7 @@ async function loadROVDiveTrack() {
     }
     const diveLabel = dives.size ? ` — ${dives.size} dive${dives.size>1?'s':''}: ${[...dives].join(', ')}` : '';
     infoEl.textContent = `${vehicle} ${cruise}: ${totalPts.toLocaleString()} pts${diveLabel}`;
+    csvBtn.style.display = 'block';
   } catch (e) {
     errEl.textContent = 'Error: ' + e.message;
     errEl.style.display = 'block';
@@ -3930,10 +3964,28 @@ async function loadROVDiveTrack() {
   }
 }
 
+function downloadLoadedTrackCSV() {
+  if (!_lastLoadedTrackPts.length) return;
+  const vehicle  = document.getElementById('rov-dive-vehicle').value;
+  const cruise   = document.getElementById('rov-dive-cruise').value;
+  const rows = ['cruise,dive,latitude,longitude,depth_m,timestamp_utc'];
+  for (const p of _lastLoadedTrackPts) {
+    rows.push(`${p.cruise},${p.dive},${p.lat},${p.lon},${p.depth ?? ''},${p.ts}`);
+  }
+  const blob = new Blob([rows.join('\n')], { type: 'text/csv' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `${vehicle.replace(/\s+/g,'_')}_${cruise}_track_${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
 function clearROVDiveTracks() {
   rovDiveTrackLines.forEach(tl => tl.remove());
   rovDiveTrackLines = [];
+  _lastLoadedTrackPts = [];
   document.getElementById('rov-dive-info').textContent = '';
+  document.getElementById('rov-dive-csv-btn').style.display = 'none';
 }
 
 async function exportVehicleTrackCSV(vessel, filename) {
@@ -3945,7 +3997,7 @@ async function exportVehicleTrackCSV(vessel, filename) {
               : vessel === 'little_hercules' ? window._lhTrackCol
               : window._herculesTrackCol;
     if (!col) throw new Error('Firestore not ready yet — try again in a moment.');
-    const snap = await window._firestoreGetDocs(window._firestoreQuery(col, window._firestoreOrderBy('ts', 'asc'), window._firestoreLimit(50000)));
+    const snap = await window._firestoreGetDocs(window._firestoreQuery(col, window._firestoreOrderBy('ts', 'asc'), window._firestoreLimit(10000)));
     if (!snap.docs.length) { statusEl.textContent = `No data recorded yet for ${filename}.`; return; }
     const rows = ['timestamp_utc,latitude,longitude,depth_m'];
     for (const d of snap.docs) {
