@@ -3641,13 +3641,29 @@ async function loadSentryHistory() {
     sentryTrackPts = snap.docs.map(d => d.data());
   } catch (e) { console.error('Sentry Firestore history load failed:', e); }
 
-  // Fall back to Grafana 48h track when Firestore has no data yet
+  // Fall back to Grafana 48h track when Firestore has no data yet, and seed Firestore
   if (sentryTrackPts.length < 2) {
     try {
       const r = await fetch('/api/sentry-track');
       if (r.ok) {
         const { points } = await r.json();
-        if (points?.length) sentryTrackPts = points;
+        if (points?.length) {
+          sentryTrackPts = points;
+          // Seed Firestore with these historical points so future loads don't need the fallback
+          if (window._firestoreAddDoc && window._sentryTrackCol) {
+            const seen = new Set();
+            for (const p of points) {
+              const key = `${p.lat.toFixed(4)},${p.lon.toFixed(4)}`;
+              if (seen.has(key)) continue;
+              seen.add(key);
+              window._firestoreAddDoc(window._sentryTrackCol, {
+                lat: p.lat, lon: p.lon, depth: p.depth ?? null,
+                ts: window._firestoreServerTs(), src: 'grafana_seed'
+              }).catch(() => {});
+            }
+            console.log(`Sentry: seeded ${seen.size} pts from Grafana into Firestore`);
+          }
+        }
       }
     } catch (e) { console.warn('Sentry Grafana fallback failed:', e); }
   }
