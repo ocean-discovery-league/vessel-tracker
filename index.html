@@ -213,8 +213,7 @@
         <div class="data-item"><div class="data-label">Longitude</div><div class="data-value" id="n-lon">—</div></div>
         <div class="data-item"><div class="data-label">Heading</div><div class="data-value" id="n-heading">—</div></div>
         <div class="data-item"><div class="data-label">Dive Status</div><div class="data-value" id="n-dive">—</div></div>
-        <div class="data-item" style="grid-column:1/-1"><div class="data-label">Additional Status</div><div class="data-value" id="n-add-status" style="font-size:10px;">—</div></div>
-        <div class="data-item"><div class="data-label">Cruise</div><div class="data-value" id="n-cruise">—</div></div>
+<div class="data-item"><div class="data-label">Cruise</div><div class="data-value" id="n-cruise">—</div></div>
         <div class="data-item"><div class="data-label">Dive</div><div class="data-value" id="n-divenum">—</div></div>
         <div class="data-item"><div class="data-label">Speed (kn)</div><div class="data-value" id="n-rov-speed">—</div></div>
       </div>
@@ -275,6 +274,21 @@
       <button class="btn" onclick="clearNautilusHistory()" style="background:#0a1929;border-color:#187D8B;color:#41B9C3;">✕ Clear All</button>
       <div id="n-hist-info" class="track-info"></div>
       <div id="n-hist-error" style="color:#ff6666;font-size:11px;margin-top:6px;display:none;"></div>
+      <div class="subsection-divider"></div>
+      <div class="subsection-label">ROV Dive Tracks</div>
+      <div style="font-size:9px;color:#8899bb;margin-bottom:6px;">Historical dive tracks from ArcGIS. Herc &amp; Little Herc only — Sentry recorded locally.</div>
+      <select id="rov-dive-vehicle" style="width:100%;background:#004D64;border:1px solid #187D8B;border-radius:5px;color:#e0e6f0;font-family:'Montserrat',sans-serif;font-size:11px;padding:6px;margin-bottom:6px;">
+        <option value="">— Select vehicle —</option>
+        <option value="Herc">ROV Hercules</option>
+        <option value="Herc (M1)">ROV Little Hercules</option>
+      </select>
+      <select id="rov-dive-cruise" style="width:100%;background:#004D64;border:1px solid #187D8B;border-radius:5px;color:#e0e6f0;font-family:'Montserrat',sans-serif;font-size:11px;padding:6px;margin-bottom:8px;">
+        <option value="">— Select cruise —</option>
+      </select>
+      <button class="btn" onclick="loadROVDiveTrack()">Show Dive Track</button>
+      <button class="btn" onclick="clearROVDiveTracks()" style="background:#0a1929;border-color:#187D8B;color:#41B9C3;">✕ Clear Dive Tracks</button>
+      <div id="rov-dive-info" class="track-info"></div>
+      <div id="rov-dive-error" style="color:#ff6666;font-size:11px;margin-top:6px;display:none;"></div>
       <div class="subsection-divider"></div>
       <div class="subsection-label" onclick="toggleHits('n')" style="cursor:pointer;user-select:none;">Zone Intersections<span id="n-hit-count" style="color:#e040fb;font-weight:400;letter-spacing:0;text-transform:none;font-size:10px;margin-left:6px;"></span><span id="n-hit-arrow" style="margin-left:auto;">▼</span></div>
       <div id="n-hit-list" style="display:none;max-height:260px;overflow-y:auto;padding-bottom:4px;"></div>
@@ -798,6 +812,7 @@
   const savedSearchesCol = collection(db, 'savedSearches');
   const atlantisTrackCol = collection(db, 'vessel_tracks/atlantis/points');
   const oceanxTrackCol   = collection(db, 'vessel_tracks/oceanxplorer/points');
+  const sentryTrackCol   = collection(db, 'vessel_tracks/sentry/points');
 
   // Live-sync saved searches into global array
   window._savedSearches = [];
@@ -1195,6 +1210,7 @@ function toggleVessels() {
   // ROV Hercules
   if (herculesMarker)    { vesselsVisible ? herculesMarker.addTo(map)    : herculesMarker.remove(); }
   if (herculesTrackLine) { vesselsVisible ? herculesTrackLine.addTo(map) : herculesTrackLine.remove(); }
+  for (const tl of rovDiveTrackLines) { vesselsVisible ? tl.addTo(map) : tl.remove(); }
   // Sentry AUV
   if (sentryMarker)      { vesselsVisible ? sentryMarker.addTo(map)      : sentryMarker.remove(); }
   if (sentryTrackLine)   { vesselsVisible ? sentryTrackLine.addTo(map)   : sentryTrackLine.remove(); }
@@ -1654,9 +1670,6 @@ async function fetchNautilusData() {
     document.getElementById('n-lon').textContent     = a.longitude.toFixed(5) + '°';
     document.getElementById('n-heading').textContent = a.heading != null ? a.heading.toFixed(1) + '°' : '—';
     document.getElementById('n-dive').textContent    = a.divestatus ?? '—';
-    fetch('/api/nautilus-status').then(r => r.ok ? r.json() : null).then(s => {
-      if (s?.status) document.getElementById('n-add-status').textContent = s.status;
-    }).catch(() => {});
     document.getElementById('n-cruise').textContent  = a.cruise ?? '—';
     document.getElementById('n-divenum').textContent = a.dive ?? '—';
     document.getElementById('n-error-msg').style.display = 'none';
@@ -3571,25 +3584,30 @@ const sentryIcon = L.divIcon({
 
 let sentryMarker = null;
 let sentryTrackLine = null;
+let sentryTrackPts = [];
 let sentryPos = null;
+let _sentryLastRecordedKey = null;
 
 function centerOnSentry() {
   if (sentryPos) map.setView([sentryPos.lat, pacificLon(sentryPos.lon)], 12);
 }
 
-async function loadSentryTrack() {
+function _drawSentryTrack() {
+  if (sentryTrackLine) sentryTrackLine.remove();
+  if (sentryTrackPts.length < 2) return;
+  const latlngs = sentryTrackPts.map(p => [p.lat, pacificLon(p.lon)]);
+  sentryTrackLine = L.featureGroup(
+    splitAtAntimeridian(latlngs).map(s => L.polyline(s, { color: '#ffeb3b', weight: 2, opacity: 0.5, dashArray: '5 5' }))
+  );
+  if (vesselsVisible) sentryTrackLine.addTo(map);
+}
+
+async function loadSentryHistory() {
   try {
-    const r = await fetch('/api/sentry-track');
-    if (!r.ok) return;
-    const { points } = await r.json();
-    if (!points?.length) return;
-    if (sentryTrackLine) sentryTrackLine.remove();
-    const latlngs = points.map(p => [p.lat, pacificLon(p.lon)]);
-    sentryTrackLine = L.featureGroup(
-      splitAtAntimeridian(latlngs).map(s => L.polyline(s, { color: '#ffeb3b', weight: 2, opacity: 0.5, dashArray: '5 5' }))
-    );
-    if (vesselsVisible) sentryTrackLine.addTo(map);
-  } catch (e) { console.warn('Sentry track load failed:', e); }
+    const snap = await getDocs(query(sentryTrackCol, orderBy('ts', 'asc'), limit(5000)));
+    sentryTrackPts = snap.docs.map(d => d.data());
+    _drawSentryTrack();
+  } catch (e) { console.warn('Sentry Firestore history load failed:', e); }
 }
 
 async function loadHerculesTrack() {
@@ -3640,6 +3658,17 @@ async function fetchSentryData() {
       sentryMarker.setLatLng([d.lat, pacificLon(d.lon)]);
     }
 
+    // Record to Firestore when position changes
+    const posKey = `${d.lat.toFixed(4)},${d.lon.toFixed(4)}`;
+    if (posKey !== _sentryLastRecordedKey) {
+      _sentryLastRecordedKey = posKey;
+      try {
+        await addDoc(sentryTrackCol, { lat: d.lat, lon: d.lon, depth: d.depth ?? null, ts: serverTimestamp() });
+        sentryTrackPts.push({ lat: d.lat, lon: d.lon });
+        _drawSentryTrack();
+      } catch (e) { console.warn('Sentry track write failed:', e); }
+    }
+
     checkZones(d.lat, d.lon, 'AUV Sentry');
   } catch (err) {
     const el = document.getElementById('sentry-error-msg');
@@ -3647,12 +3676,79 @@ async function fetchSentryData() {
   }
 }
 
-loadSentryTrack();
-loadHerculesTrack();
-fetchSentryData();
+loadSentryHistory().then(() => fetchSentryData());
 setInterval(fetchSentryData, 300000);
-setInterval(loadSentryTrack, 300000);
+loadHerculesTrack();
 setInterval(loadHerculesTrack, 300000);
+
+
+
+// ── ROV Dive Track History ────────────────────────────────────────────────────
+const ROV_DIVE_CRUISES = {
+  'Herc':      ['NA138'],
+  'Herc (M1)': ['NA179', 'NA180']
+};
+
+let rovDiveTrackLines = [];
+
+document.getElementById('rov-dive-vehicle')?.addEventListener('change', function() {
+  const cruises = ROV_DIVE_CRUISES[this.value] ?? [];
+  const sel = document.getElementById('rov-dive-cruise');
+  sel.innerHTML = '<option value="">— Select cruise —</option>';
+  cruises.forEach(c => {
+    const opt = document.createElement('option');
+    opt.value = c; opt.textContent = c;
+    sel.appendChild(opt);
+  });
+});
+
+async function loadROVDiveTrack() {
+  const vehicle  = document.getElementById('rov-dive-vehicle').value;
+  const cruise   = document.getElementById('rov-dive-cruise').value;
+  const infoEl   = document.getElementById('rov-dive-info');
+  const errEl    = document.getElementById('rov-dive-error');
+  errEl.style.display = 'none';
+  if (!vehicle || !cruise) { errEl.textContent = 'Select a vehicle and cruise first.'; errEl.style.display = 'block'; return; }
+
+  infoEl.textContent = 'Loading…';
+  try {
+    const vEnc = encodeURIComponent(vehicle);
+    const url = `https://services9.arcgis.com/ci0kSsvh5NZiSvac/arcgis/rest/services/RT_Vehicle_Positions_and_Tracks_view/FeatureServer/2/query`
+      + `?where=vehicle%3D'${vEnc}'+AND+cruise%3D'${encodeURIComponent(cruise)}'`
+      + `&returnGeometry=true&outSR=4326&outFields=vehicle,cruise,dive&f=json`;
+    const r = await fetch(url);
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    const d = await r.json();
+    const features = d.features ?? [];
+    if (!features.length) { infoEl.textContent = 'No track data found.'; return; }
+
+    let totalPts = 0;
+    const dives = new Set();
+    for (const feat of features) {
+      const paths = feat.geometry?.paths ?? [];
+      const latlngs = paths.flatMap(p => p.map(([lon, lat]) => [lat, lon]));
+      totalPts += latlngs.length;
+      if (feat.attributes?.dive) dives.add(feat.attributes.dive);
+      const tl = L.featureGroup(
+        splitAtAntimeridian(latlngs).map(s => L.polyline(s, { color: '#ffeb3b', weight: 1.5, opacity: 0.6, dashArray: '4 4' }))
+      );
+      if (vesselsVisible) tl.addTo(map);
+      rovDiveTrackLines.push(tl);
+    }
+    const diveLabel = dives.size ? ` — ${dives.size} dive${dives.size>1?'s':''}: ${[...dives].join(', ')}` : '';
+    infoEl.textContent = `${vehicle} ${cruise}: ${totalPts.toLocaleString()} pts${diveLabel}`;
+  } catch (e) {
+    errEl.textContent = 'Error: ' + e.message;
+    errEl.style.display = 'block';
+    infoEl.textContent = '';
+  }
+}
+
+function clearROVDiveTracks() {
+  rovDiveTrackLines.forEach(tl => tl.remove());
+  rovDiveTrackLines = [];
+  document.getElementById('rov-dive-info').textContent = '';
+}
 
 
 
