@@ -829,6 +829,17 @@
     await deleteDoc(doc(savedSearchesCol, id));
   };
 
+  // Expose Firestore functions and vessel track collections to global scope
+  window._firestoreAddDoc       = addDoc;
+  window._firestoreGetDocs      = getDocs;
+  window._firestoreQuery        = query;
+  window._firestoreOrderBy      = orderBy;
+  window._firestoreLimit        = limit;
+  window._firestoreServerTs     = serverTimestamp;
+  window._atlantisTrackCol      = atlantisTrackCol;
+  window._oceanxTrackCol        = oceanxTrackCol;
+  window._sentryTrackCol        = sentryTrackCol;
+
   // Expose Firestore helpers to global scope for the rest of the app
   window._fbSaveGoal = async (zoneName, data) => {
     await setDoc(doc(goalsCol, zoneName.replace(/\//g, '_')), data);
@@ -3433,7 +3444,7 @@ function _drawAtlantisTrack() {
 
 async function loadAtlantisHistory() {
   try {
-    const snap = await getDocs(query(atlantisTrackCol, orderBy('ts', 'asc'), limit(2000)));
+    const snap = await window._firestoreGetDocs(window._firestoreQuery(window._atlantisTrackCol, window._firestoreOrderBy('ts', 'asc'), window._firestoreLimit(2000)));
     atlantisTrackPts = snap.docs.map(d => d.data());
     _drawAtlantisTrack();
   } catch (e) { console.warn('Atlantis history load failed:', e); }
@@ -3469,7 +3480,7 @@ async function fetchAtlantisData() {
     if (tsKey !== _atlantisLastRecordedTs) {
       _atlantisLastRecordedTs = tsKey;
       try {
-        await addDoc(atlantisTrackCol, { lat: d.lat, lon: d.lon, ts: serverTimestamp(), src_ts: d.timestamp ?? null });
+        await window._firestoreAddDoc(window._atlantisTrackCol, { lat: d.lat, lon: d.lon, ts: window._firestoreServerTs(), src_ts: d.timestamp ?? null });
         atlantisTrackPts.push({ lat: d.lat, lon: d.lon });
         _drawAtlantisTrack();
       } catch (e) { console.warn('Atlantis track write failed:', e); }
@@ -3517,7 +3528,7 @@ function _drawOceanXTrack() {
 
 async function loadOceanXHistory() {
   try {
-    const snap = await getDocs(query(oceanxTrackCol, orderBy('ts', 'asc'), limit(2000)));
+    const snap = await window._firestoreGetDocs(window._firestoreQuery(window._oceanxTrackCol, window._firestoreOrderBy('ts', 'asc'), window._firestoreLimit(2000)));
     oceanxTrackPts = snap.docs.map(d => d.data());
     _drawOceanXTrack();
   } catch (e) { console.warn('OceanXplorer history load failed:', e); }
@@ -3556,7 +3567,7 @@ async function fetchOceanXplorerData() {
     if (tsKey !== _oceanxLastRecordedTs) {
       _oceanxLastRecordedTs = tsKey;
       try {
-        await addDoc(oceanxTrackCol, { lat: d.lat, lon: d.lon, ts: serverTimestamp(), src_ts: d.timestamp ?? null });
+        await window._firestoreAddDoc(window._oceanxTrackCol, { lat: d.lat, lon: d.lon, ts: window._firestoreServerTs(), src_ts: d.timestamp ?? null });
         oceanxTrackPts.push({ lat: d.lat, lon: d.lon });
         _drawOceanXTrack();
       } catch (e) { console.warn('OceanXplorer track write failed:', e); }
@@ -3604,10 +3615,10 @@ function _drawSentryTrack() {
 
 async function loadSentryHistory() {
   try {
-    const snap = await getDocs(query(sentryTrackCol, orderBy('ts', 'asc'), limit(5000)));
+    const snap = await window._firestoreGetDocs(window._firestoreQuery(window._sentryTrackCol, window._firestoreOrderBy('ts', 'asc'), window._firestoreLimit(5000)));
     sentryTrackPts = snap.docs.map(d => d.data());
     _drawSentryTrack();
-  } catch (e) { console.warn('Sentry Firestore history load failed:', e); }
+  } catch (e) { console.error('Sentry Firestore history load failed:', e); }
 }
 
 async function loadHerculesTrack() {
@@ -3663,7 +3674,7 @@ async function fetchSentryData() {
     if (posKey !== _sentryLastRecordedKey) {
       _sentryLastRecordedKey = posKey;
       try {
-        await addDoc(sentryTrackCol, { lat: d.lat, lon: d.lon, depth: d.depth ?? null, ts: serverTimestamp() });
+        await window._firestoreAddDoc(window._sentryTrackCol, { lat: d.lat, lon: d.lon, depth: d.depth ?? null, ts: window._firestoreServerTs() });
         sentryTrackPts.push({ lat: d.lat, lon: d.lon });
         _drawSentryTrack();
       } catch (e) { console.warn('Sentry track write failed:', e); }
