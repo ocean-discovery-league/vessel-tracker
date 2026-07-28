@@ -292,6 +292,13 @@
       <button class="btn" onclick="clearROVDiveTracks()" style="background:#0a1929;border-color:#187D8B;color:#41B9C3;">✕ Clear Dive Tracks</button>
       <div id="rov-dive-info" class="track-info"></div>
       <div id="rov-dive-error" style="color:#ff6666;font-size:11px;margin-top:6px;display:none;"></div>
+      <div style="margin-top:10px;font-size:9px;color:#5a7080;text-transform:uppercase;letter-spacing:0.8px;margin-bottom:5px;">Download Local Archive as CSV</div>
+      <div style="display:flex;flex-direction:column;gap:4px;">
+        <button class="btn" onclick="exportVehicleTrackCSV('hercules','ROV_Hercules')" style="background:#0a1929;border-color:#ffeb3b;color:#ffeb3b;font-size:10px;">⬇ ROV Hercules</button>
+        <button class="btn" onclick="exportVehicleTrackCSV('little_hercules','ROV_Little_Hercules')" style="background:#0a1929;border-color:#ffeb3b;color:#ffeb3b;font-size:10px;">⬇ ROV Little Hercules</button>
+        <button class="btn" onclick="exportVehicleTrackCSV('sentry','AUV_Sentry')" style="background:#0a1929;border-color:#ffeb3b;color:#ffeb3b;font-size:10px;">⬇ AUV Sentry</button>
+      </div>
+      <div id="export-track-status" style="font-size:10px;color:#8899bb;margin-top:4px;display:none;"></div>
       <div class="subsection-divider"></div>
       <div class="subsection-label" onclick="toggleHits('n')" style="cursor:pointer;user-select:none;">Zone Intersections<span id="n-hit-count" style="color:#e040fb;font-weight:400;letter-spacing:0;text-transform:none;font-size:10px;margin-left:6px;"></span><span id="n-hit-arrow" style="margin-left:auto;">▼</span></div>
       <div id="n-hit-list" style="display:none;max-height:260px;overflow-y:auto;padding-bottom:4px;"></div>
@@ -2307,8 +2314,24 @@ async function downloadNautilusArchive() {
   progText.textContent = 'Saving…';
   progBar.style.width  = '100%';
 
+  // Append vehicle tracks from Firestore
+  progText.textContent = 'Fetching vehicle tracks…';
+  const vehicles = {};
+  const vehicleCols = { hercules: window._herculesTrackCol, little_hercules: window._lhTrackCol, sentry: window._sentryTrackCol };
+  for (const [name, col] of Object.entries(vehicleCols)) {
+    try {
+      if (!col) continue;
+      const snap = await window._firestoreGetDocs(window._firestoreQuery(col, window._firestoreOrderBy('ts', 'asc'), window._firestoreLimit(50000)));
+      vehicles[name] = snap.docs.map(d => {
+        const p = d.data();
+        return { lat: +p.lat.toFixed(5), lon: +p.lon.toFixed(5), depth: p.depth != null ? +p.depth.toFixed(1) : null,
+                 ts: p.ts?.toDate ? p.ts.toDate().toISOString() : null };
+      });
+    } catch(e) { vehicles[name] = []; }
+  }
+
   const payload = JSON.stringify({ version:2, vessel:'nautilus', generated: new Date().toISOString(),
-    count: Object.keys(all).length, cruises: all }, null, 0);
+    count: Object.keys(all).length, cruises: all, vehicles }, null, 0);
   const blob = new Blob([payload], { type: 'application/json' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
@@ -2316,8 +2339,9 @@ async function downloadNautilusArchive() {
   a.click();
   progWrap.style.display = 'none';
   btn.disabled = false;
+  const vCounts = Object.entries(vehicles).map(([k,v]) => `${k}:${v.length}`).join(', ');
   document.getElementById('n-archive-status').textContent =
-    `✓ Downloaded: ${Object.keys(all).length} cruises · ${(payload.length/1024).toFixed(0)} KB`;
+    `✓ Downloaded: ${Object.keys(all).length} cruises · vehicles: ${vCounts} · ${(payload.length/1024).toFixed(0)} KB`;
 }
 
 // ── Download Okeanos archive ──────────────────────────────────────────────────
@@ -2376,7 +2400,26 @@ function loadNautilusArchiveFile(event) {
       if (!data.cruises || typeof data.cruises !== 'object') throw new Error('Invalid archive format.');
       nautilusArchive = data;
       const cnt = Object.keys(data.cruises).length;
-      statusEl.textContent = `✓ Archive loaded: ${cnt} cruises (generated ${data.generated?.slice(0,10) || 'unknown'})`;
+
+      // Draw vehicle tracks if present
+      const vLabels = [];
+      if (data.vehicles && typeof data.vehicles === 'object') {
+        const colors = { hercules: '#ffeb3b', little_hercules: '#ffeb3b', sentry: '#ffeb3b' };
+        const names  = { hercules: 'ROV Hercules', little_hercules: 'ROV Little Hercules', sentry: 'AUV Sentry' };
+        for (const [vname, pts] of Object.entries(data.vehicles)) {
+          if (!pts?.length) continue;
+          const latlngs = pts.map(p => [p.lat, pacificLon(p.lon)]);
+          const tl = L.featureGroup(
+            splitAtAntimeridian(latlngs).map(s => L.polyline(s, { color: colors[vname] ?? '#ffeb3b', weight: 1.5, opacity: 0.6, dashArray: '4 4' }))
+          );
+          if (vesselsVisible) tl.addTo(map);
+          rovDiveTrackLines.push(tl);
+          vLabels.push(`${names[vname] ?? vname}: ${pts.length} pts`);
+        }
+      }
+
+      const vNote = vLabels.length ? ` · ${vLabels.join(', ')}` : '';
+      statusEl.textContent = `✓ Archive loaded: ${cnt} cruises${vNote} (generated ${data.generated?.slice(0,10) || 'unknown'})`;
       statusEl.style.color = '#29b6f6';
     } catch(err) {
       statusEl.textContent = 'Error: ' + err.message;
@@ -3643,18 +3686,19 @@ async function forceSentrySeed() {
     const seen = new Set();
     let written = 0;
     for (const p of points) {
+      if ((p.depth == null ? 0 : Math.abs(p.depth)) <= 10) continue;
       const key = `${p.lat.toFixed(4)},${p.lon.toFixed(4)}`;
       if (seen.has(key)) continue;
       seen.add(key);
-      statusEl.textContent = `Writing… ${written}/${seen.size}`;
+      statusEl.textContent = `Writing… ${written} pts`;
       await window._firestoreAddDoc(window._sentryTrackCol, {
         lat: p.lat, lon: p.lon, depth: p.depth ?? null,
         ts: window._firestoreServerTs(), src: 'grafana_seed'
       });
       written++;
     }
-    statusEl.textContent = `✓ Seeded ${written} points. Reload to see full track.`;
-    btn.textContent = '✓ Done';
+    statusEl.textContent = `✓ Seeded ${written} dive points. Reload to see full track.`;
+    btn.style.display = 'none';
   } catch(e) {
     statusEl.textContent = 'Error: ' + e.message;
     btn.disabled = false;
@@ -3690,6 +3734,7 @@ async function loadSentryHistory() {
           if (window._firestoreAddDoc && window._sentryTrackCol) {
             const seen = new Set();
             for (const p of points) {
+              if ((p.depth == null ? 0 : Math.abs(p.depth)) <= 10) continue;
               const key = `${p.lat.toFixed(4)},${p.lon.toFixed(4)}`;
               if (seen.has(key)) continue;
               seen.add(key);
@@ -3698,7 +3743,7 @@ async function loadSentryHistory() {
                 ts: window._firestoreServerTs(), src: 'grafana_seed'
               }).catch(() => {});
             }
-            console.log(`Sentry: seeded ${seen.size} pts from Grafana into Firestore`);
+            console.log(`Sentry: seeded ${seen.size} dive pts from Grafana into Firestore`);
           }
         }
       }
@@ -3756,15 +3801,18 @@ async function fetchSentryData() {
       sentryMarker.setLatLng([d.lat, pacificLon(d.lon)]);
     }
 
-    // Record to Firestore when position changes
-    const posKey = `${d.lat.toFixed(4)},${d.lon.toFixed(4)}`;
-    if (posKey !== _sentryLastRecordedKey) {
-      _sentryLastRecordedKey = posKey;
-      try {
-        await window._firestoreAddDoc(window._sentryTrackCol, { lat: d.lat, lon: d.lon, depth: d.depth ?? null, ts: window._firestoreServerTs() });
-        sentryTrackPts.push({ lat: d.lat, lon: d.lon });
-        _drawSentryTrack();
-      } catch (e) { console.warn('Sentry track write failed:', e); }
+    // Record to Firestore only when Sentry is actively diving (depth > 10m)
+    const sentryDepth = d.depth != null ? Math.abs(d.depth) : 0;
+    if (sentryDepth > 10) {
+      const posKey = `${d.lat.toFixed(4)},${d.lon.toFixed(4)}`;
+      if (posKey !== _sentryLastRecordedKey) {
+        _sentryLastRecordedKey = posKey;
+        try {
+          await window._firestoreAddDoc(window._sentryTrackCol, { lat: d.lat, lon: d.lon, depth: d.depth ?? null, ts: window._firestoreServerTs() });
+          sentryTrackPts.push({ lat: d.lat, lon: d.lon });
+          _drawSentryTrack();
+        } catch (e) { console.warn('Sentry track write failed:', e); }
+      }
     }
 
     checkZones(d.lat, d.lon, 'AUV Sentry');
@@ -3886,6 +3934,35 @@ function clearROVDiveTracks() {
   rovDiveTrackLines.forEach(tl => tl.remove());
   rovDiveTrackLines = [];
   document.getElementById('rov-dive-info').textContent = '';
+}
+
+async function exportVehicleTrackCSV(vessel, filename) {
+  const statusEl = document.getElementById('export-track-status');
+  statusEl.style.display = 'block';
+  statusEl.textContent = `Fetching ${filename} data…`;
+  try {
+    const col = vessel === 'sentry' ? window._sentryTrackCol
+              : vessel === 'little_hercules' ? window._lhTrackCol
+              : window._herculesTrackCol;
+    if (!col) throw new Error('Firestore not ready yet — try again in a moment.');
+    const snap = await window._firestoreGetDocs(window._firestoreQuery(col, window._firestoreOrderBy('ts', 'asc'), window._firestoreLimit(50000)));
+    if (!snap.docs.length) { statusEl.textContent = `No data recorded yet for ${filename}.`; return; }
+    const rows = ['timestamp_utc,latitude,longitude,depth_m'];
+    for (const d of snap.docs) {
+      const p = d.data();
+      const ts = p.ts?.toDate ? p.ts.toDate().toISOString() : '';
+      rows.push(`${ts},${p.lat},${p.lon},${p.depth ?? ''}`);
+    }
+    const blob = new Blob([rows.join('\n')], { type: 'text/csv' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `${filename}_track_${new Date().toISOString().slice(0,10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+    statusEl.textContent = `✓ Downloaded ${snap.docs.length} points for ${filename}.`;
+  } catch(e) {
+    statusEl.textContent = 'Error: ' + e.message;
+  }
 }
 
 
