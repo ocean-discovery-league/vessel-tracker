@@ -275,12 +275,13 @@
       <div id="n-hist-info" class="track-info"></div>
       <div id="n-hist-error" style="color:#ff6666;font-size:11px;margin-top:6px;display:none;"></div>
       <div class="subsection-divider"></div>
-      <div class="subsection-label">ROV Dive Tracks</div>
-      <div style="font-size:9px;color:#8899bb;margin-bottom:6px;">Historical dive tracks from ArcGIS. Herc &amp; Little Herc only — Sentry recorded locally.</div>
+      <div class="subsection-label">ROV/AUV Dive Tracks</div>
+      <div style="font-size:9px;color:#8899bb;margin-bottom:6px;">ArcGIS archive for Herc &amp; Little Herc; locally recorded tracks for all three vehicles.</div>
       <select id="rov-dive-vehicle" style="width:100%;background:#004D64;border:1px solid #187D8B;border-radius:5px;color:#e0e6f0;font-family:'Montserrat',sans-serif;font-size:11px;padding:6px;margin-bottom:6px;">
         <option value="">— Select vehicle —</option>
         <option value="Herc">ROV Hercules</option>
         <option value="Herc (M1)">ROV Little Hercules</option>
+        <option value="Sentry">AUV Sentry</option>
       </select>
       <select id="rov-dive-cruise" style="width:100%;background:#004D64;border:1px solid #187D8B;border-radius:5px;color:#e0e6f0;font-family:'Montserrat',sans-serif;font-size:11px;padding:6px;margin-bottom:8px;">
         <option value="">— Select cruise —</option>
@@ -810,9 +811,11 @@
   const storage = getStorage(fbApp);
   const goalsCol = collection(db, 'explorationGoals');
   const savedSearchesCol = collection(db, 'savedSearches');
-  const atlantisTrackCol = collection(db, 'vessel_tracks/atlantis/points');
-  const oceanxTrackCol   = collection(db, 'vessel_tracks/oceanxplorer/points');
-  const sentryTrackCol   = collection(db, 'vessel_tracks/sentry/points');
+  const atlantisTrackCol   = collection(db, 'vessel_tracks/atlantis/points');
+  const oceanxTrackCol     = collection(db, 'vessel_tracks/oceanxplorer/points');
+  const sentryTrackCol     = collection(db, 'vessel_tracks/sentry/points');
+  const herculesTrackCol   = collection(db, 'vessel_tracks/hercules/points');
+  const lhTrackCol         = collection(db, 'vessel_tracks/little_hercules/points');
 
   // Live-sync saved searches into global array
   window._savedSearches = [];
@@ -839,6 +842,8 @@
   window._atlantisTrackCol      = atlantisTrackCol;
   window._oceanxTrackCol        = oceanxTrackCol;
   window._sentryTrackCol        = sentryTrackCol;
+  window._herculesTrackCol      = herculesTrackCol;
+  window._lhTrackCol            = lhTrackCol;
 
   // Expose Firestore helpers to global scope for the rest of the app
   window._fbSaveGoal = async (zoneName, data) => {
@@ -1611,6 +1616,17 @@ function updateROVDisplay(data) {
   } else if (herculesMarker) {
     herculesMarker.remove();
     herculesMarker = null;
+  }
+
+  // Record position to Firestore when ROV is in water
+  if (rovInWater && data.lat != null && data.lon != null && window._firestoreAddDoc && _activeROV) {
+    const posKey = `${data.lat.toFixed(4)},${data.lon.toFixed(4)}`;
+    const col = _activeROV === 'Herc (M1)' ? window._lhTrackCol : window._herculesTrackCol;
+    const lastKeyStore = _activeROV === 'Herc (M1)' ? '_lhLastRecordedKey' : '_hercLastRecordedKey';
+    if (posKey !== window[lastKeyStore]) {
+      window[lastKeyStore] = posKey;
+      window._firestoreAddDoc(col, { lat: data.lat, lon: data.lon, depth: data.depth ?? null, ts: window._firestoreServerTs() }).catch(() => {});
+    }
   }
 }
 
@@ -3736,6 +3752,11 @@ document.getElementById('rov-dive-vehicle')?.addEventListener('change', function
     opt.value = c; opt.textContent = c;
     sel.appendChild(opt);
   });
+  if (this.value) {
+    const local = document.createElement('option');
+    local.value = '__local__'; local.textContent = 'Local Recording (this tool)';
+    sel.appendChild(local);
+  }
 });
 
 async function loadROVDiveTrack() {
@@ -3747,6 +3768,34 @@ async function loadROVDiveTrack() {
   if (!vehicle || !cruise) { errEl.textContent = 'Select a vehicle and cruise first.'; errEl.style.display = 'block'; return; }
 
   infoEl.textContent = 'Loading…';
+
+  // Local Firestore recording path
+  if (cruise === '__local__') {
+    try {
+      const col = vehicle === 'Sentry' ? window._sentryTrackCol
+                : vehicle === 'Herc (M1)' ? window._lhTrackCol
+                : window._herculesTrackCol;
+      if (!col) throw new Error('Local track collection not ready yet.');
+      const snap = await window._firestoreGetDocs(window._firestoreQuery(col, window._firestoreOrderBy('ts', 'asc'), window._firestoreLimit(10000)));
+      const pts = snap.docs.map(d => d.data());
+      if (!pts.length) { infoEl.textContent = 'No locally recorded points yet.'; return; }
+      const latlngs = pts.map(p => [p.lat, pacificLon(p.lon)]);
+      const tl = L.featureGroup(
+        splitAtAntimeridian(latlngs).map(s => L.polyline(s, { color: '#ffeb3b', weight: 1.5, opacity: 0.6, dashArray: '4 4' }))
+      );
+      if (vesselsVisible) tl.addTo(map);
+      rovDiveTrackLines.push(tl);
+      infoEl.textContent = `${vehicle} local: ${pts.length.toLocaleString()} pts`;
+      if (pts.length) map.fitBounds(tl.getBounds(), { padding: [40, 40] });
+    } catch (e) {
+      errEl.textContent = 'Error: ' + e.message;
+      errEl.style.display = 'block';
+      infoEl.textContent = '';
+    }
+    return;
+  }
+
+  // ArcGIS archive path
   try {
     const vEnc = encodeURIComponent(vehicle);
     const url = `https://services9.arcgis.com/ci0kSsvh5NZiSvac/arcgis/rest/services/RT_Vehicle_Positions_and_Tracks_view/FeatureServer/2/query`
