@@ -1517,8 +1517,10 @@ function updateROVDisplay(data) {
   document.getElementById('n-rov-o2').textContent    = fmt(data.o2,    1, '%');
 
   const diveStatus = (document.getElementById('n-dive')?.textContent || '').toLowerCase();
-  const rovInWater = diveStatus && !diveStatus.includes('—') && !diveStatus.includes('on deck')
+  const statusSaysDeployed = diveStatus && !diveStatus.includes('—') && !diveStatus.includes('on deck')
     && !diveStatus.includes('transit') && !diveStatus.includes('surface') && !diveStatus.includes('stowed');
+  const depthSaysDeployed = data.depth != null && Math.abs(data.depth) > 50;
+  const rovInWater = statusSaysDeployed && depthSaysDeployed;
 
   if (rovInWater && data.lat != null && data.lon != null) {
     if (!herculesMarker) {
