@@ -244,6 +244,8 @@
             <div class="data-item"><div class="data-label">H. Error (m)</div><div class="data-value" id="sentry-herr">—</div></div>
           </div>
           <div id="sentry-error-msg" style="color:#ff6666;font-size:11px;margin-top:6px;display:none;"></div>
+          <button class="btn" onclick="forceSentrySeed()" id="sentry-seed-btn" style="background:#0a1929;border-color:#ffeb3b;color:#ffeb3b;font-size:10px;margin-bottom:4px;">⬆ Seed 48h track into local archive</button>
+          <div id="sentry-seed-status" style="font-size:10px;color:#8899bb;margin-bottom:4px;display:none;"></div>
           <button class="btn" onclick="centerOnSentry()" style="border-color:#ffeb3b;color:#ffeb3b;">
             <svg xmlns="http://www.w3.org/2000/svg" width="12" height="14" viewBox="0 0 24 28" fill="currentColor" style="vertical-align:-2px;margin-right:5px;flex-shrink:0;"><path d="M12 0C7.6 0 4 3.6 4 8c0 6 8 16 8 16s8-10 8-16c0-4.4-3.6-8-8-8zm0 11a3 3 0 1 1 0-6 3 3 0 0 1 0 6z"/></svg>
             Center on <i>Sentry</i>
@@ -3623,6 +3625,41 @@ let _sentryLastRecordedKey = null;
 
 function centerOnSentry() {
   if (sentryPos) map.setView([sentryPos.lat, pacificLon(sentryPos.lon)], 12);
+}
+
+async function forceSentrySeed() {
+  const btn = document.getElementById('sentry-seed-btn');
+  const statusEl = document.getElementById('sentry-seed-status');
+  btn.disabled = true;
+  btn.textContent = 'Fetching from Grafana…';
+  statusEl.style.display = 'block';
+  statusEl.textContent = '';
+  try {
+    const r = await fetch('/api/sentry-track');
+    if (!r.ok) throw new Error(`Grafana API error ${r.status}`);
+    const { points } = await r.json();
+    if (!points?.length) { statusEl.textContent = 'No Grafana points returned — Sentry may not have been active in the last 48h.'; btn.disabled = false; btn.textContent = '⬆ Seed 48h track into local archive'; return; }
+
+    const seen = new Set();
+    let written = 0;
+    for (const p of points) {
+      const key = `${p.lat.toFixed(4)},${p.lon.toFixed(4)}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      statusEl.textContent = `Writing… ${written}/${seen.size}`;
+      await window._firestoreAddDoc(window._sentryTrackCol, {
+        lat: p.lat, lon: p.lon, depth: p.depth ?? null,
+        ts: window._firestoreServerTs(), src: 'grafana_seed'
+      });
+      written++;
+    }
+    statusEl.textContent = `✓ Seeded ${written} points. Reload to see full track.`;
+    btn.textContent = '✓ Done';
+  } catch(e) {
+    statusEl.textContent = 'Error: ' + e.message;
+    btn.disabled = false;
+    btn.textContent = '⬆ Seed 48h track into local archive';
+  }
 }
 
 function _drawSentryTrack() {
