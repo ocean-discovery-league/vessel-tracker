@@ -750,9 +750,21 @@
     <polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"/>
   </svg>
 </div>
+<div id="rings10k-btn" onclick="toggle10kmRings()"
+  class="map-overlay-btn"
+  title="Show/hide 10km zone rings"
+  style="position:fixed;top:476px;right:10px;z-index:1000;width:34px;height:34px;
+         background:#0E2446;border:2px solid #187D8B;border-radius:6px;cursor:pointer;opacity:0.45;
+         display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.5);">
+  <span class="map-btn-tip">10km Rings</span>
+  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#81e1e7" stroke-width="1.8">
+    <circle cx="12" cy="12" r="4"/>
+    <circle cx="12" cy="12" r="9" stroke-dasharray="3 2" opacity="0.6"/>
+  </svg>
+</div>
 <div id="vessels-btn" onclick="toggleVessels()"
   class="map-overlay-btn"
-  style="position:fixed;top:440px;right:10px;z-index:1000;width:34px;height:34px;
+  style="position:fixed;top:512px;right:10px;z-index:1000;width:34px;height:34px;
          background:#0E2446;border:2px solid #187D8B;border-radius:6px;cursor:pointer;
          display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.5);">
   <span class="map-btn-tip">Live Vessels</span>
@@ -1164,7 +1176,8 @@ let gebcoActive = false;
 darkLayer.addTo(map);
 
 // Draw all 10,000 zones using shared canvas renderer
-const canvasRenderer = L.canvas({ padding: 0.5 });
+const canvasRenderer   = L.canvas({ padding: 0.5 });
+const canvas10kRenderer = L.canvas({ padding: 0.5 });
 // Zones with geometric issues flagged during preprocessing
 // Zones whose 5km buffer edge extends into water shallower than 200m (verified via GEBCO sampling)
 const ZONE_EEZ_HS_POINT = {"Arctic Ocean-CAN-9768":"Canadian Exclusive Economic Zone","Arctic Ocean-CAN-9769":"Canadian Exclusive Economic Zone","Arctic Ocean-CAN-9780":"Canadian Exclusive Economic Zone","Arctic Ocean-CAN-9794":"Canadian Exclusive Economic Zone","Arctic Ocean-HS-9407":"High Seas","Arctic Ocean-HS-9608":"High Seas","Arctic Ocean-HS-9616":"High Seas","Arctic Ocean-HS-9674":"High Seas","Arctic Ocean-HS-9685":"High Seas","Arctic Ocean-HS-9687":"High Seas","Arctic Ocean-HS-9787":"High Seas","Arctic Ocean-HS-9792":"High Seas","Arctic Ocean-HS-9939":"High Seas","Arctic Ocean-HS-9940":"High Seas","Arctic Ocean-HS-9956":"High Seas","Arctic Ocean-RUS-9681":"Russian Exclusive Economic Zone","Arctic Ocean-RUS-9953":"Russian Exclusive Economic Zone","Arctic Ocean-RUS-9959":"Russian Exclusive Economic Zone","Arctic Ocean-RUS-9976":"Russian Exclusive Economic Zone","Arctic Ocean-RUS-9982":"Russian Exclusive Economic Zone","Arctic Ocean-RUS-9983":"Russian Exclusive Economic Zone","Arctic Ocean-SJM-9383":"Norwegian Exclusive Economic Zone (Jan Mayen)","Arctic Ocean-SJM-9621":"Norwegian Exclusive Economic Zone (Svalbard)","Arctic Ocean-SJM-9671":"Norwegian Exclusive Economic Zone (Svalbard)","Indian Ocean-AUS-2943":"Australian Exclusive Economic Zone","Indian Ocean-AUS-4485":"Australian Exclusive Economic Zone","Indian Ocean-HMD-2334":"Australian Exclusive Economic Zone (Heard and McDonald Islands)","Indian Ocean-HS-1668":"High Seas","Indian Ocean-HS-2280":"High Seas","Indian Ocean-HS-2282":"High Seas","Indian Ocean-HS-3525":"High Seas","Indian Ocean-HS-4495":"High Seas","Indian Ocean-HS-5625":"High Seas","Indian Ocean-HS-5641":"High Seas","Indian Ocean-HS-6182":"High Seas","Indian Ocean-HS-6193":"High Seas","Indian Ocean-IDN-6247":"Indonesian Exclusive Economic Zone","Indian Ocean-IND-6874":"Indian Exclusive Economic Zone","Indian Ocean-IND-6876":"Indian Exclusive Economic Zone","Indian Ocean-LKA-6215":"Sri Lankan Exclusive Economic Zone","Indian Ocean-MUS-5053":"Mauritian Exclusive Economic Zone","Indian Ocean-OMN-6859":"Omani Exclusive Economic Zone","Indian Ocean-REU-4323":"French Exclusive Economic Zone (Réunion)","Indian Ocean-SOM-6146":"Somali Exclusive Economic Zone","Indian Ocean-SYC-5638":"Seychellois Exclusive Economic Zone","North Atlantic Ocean-BHS-8078":"Bahamian Exclusive Economic Zone","North Atlantic Ocean-BMU-8097":"British Exclusive Economic Zone (Bermuda)","North Atlantic Ocean-HS-8080":"High Seas","North Atlantic Ocean-HS-8534":"High Seas","North Atlantic Ocean-HS-8583":"High Seas","North Atlantic Ocean-HS-8622":"High Seas","North Atlantic Ocean-PRT-8635":"Portuguese Exclusive Economic Zone","North Pacific Ocean-COL-6000":"Colombian Exclusive Economic Zone","North Pacific Ocean-FSM-6359":"Micronesian Exclusive Economic Zone","North Pacific Ocean-HS-5400":"High Seas","North Pacific Ocean-HS-6579":"High Seas","North Pacific Ocean-HS-7126":"High Seas","North Pacific Ocean-HS-7238":"High Seas","North Pacific Ocean-HS-7857":"High Seas","North Pacific Ocean-HS-8338":"High Seas","North Pacific Ocean-HS-8358":"High Seas","North Pacific Ocean-HS-9125":"High Seas","North Pacific Ocean-JPN-7807":"Japanese Exclusive Economic Zone","North Pacific Ocean-JPN-8334":"Japanese Exclusive Economic Zone","North Pacific Ocean-JPN-8736":"Japanese Exclusive Economic Zone","North Pacific Ocean-UMI-7240":"United States Exclusive Economic Zone (Johnston Atoll)","North Pacific Ocean-USA-8817":"United States Exclusive Economic Zone (Alaska)","North Pacific Ocean-USA-9093":"United States Exclusive Economic Zone (Alaska)","South Atlantic Ocean-ARG-1294":"Argentinian Exclusive Economic Zone","South Atlantic Ocean-ARG-1295":"Argentinian Exclusive Economic Zone","South Atlantic Ocean-BRA-4909":"Brazilian Exclusive Economic Zone","South Atlantic Ocean-FLK-1324":"Overlapping claim Falkland / Malvinas Islands: United Kingdom / Argentina","South Atlantic Ocean-HS-1329":"High Seas","South Atlantic Ocean-HS-1408":"High Seas","South Atlantic Ocean-HS-1419":"High Seas","South Atlantic Ocean-HS-1427":"High Seas","South Atlantic Ocean-HS-3348":"High Seas","South Atlantic Ocean-HS-3367":"High Seas","South Atlantic Ocean-SGS-1391":"Overlapping claim South Georgia and the South Sandwich Islands: United Kingdom / Argentina","South Atlantic Ocean-SHN-4950":"British Exclusive Economic Zone (Ascension)","South Atlantic Ocean-SHN-4975":"British Exclusive Economic Zone (Saint Helena)","South Pacific Ocean-AUS-1842":"Australian Exclusive Economic Zone (Macquarie Island)","South Pacific Ocean-HS-1835":"High Seas","South Pacific Ocean-HS-2037":"High Seas","South Pacific Ocean-HS-2473":"High Seas","South Pacific Ocean-HS-3076":"High Seas","South Pacific Ocean-HS-3820":"High Seas","South Pacific Ocean-HS-3835":"High Seas","South Pacific Ocean-HS-3843":"High Seas","South Pacific Ocean-HS-3859":"High Seas","South Pacific Ocean-HS-4677":"High Seas","South Pacific Ocean-HS-4893":"High Seas","South Pacific Ocean-HS-5421":"High Seas","South Pacific Ocean-HS-5874":"High Seas","South Pacific Ocean-NCL-4517":"French Exclusive Economic Zone (New Caledonia)","South Pacific Ocean-NZL-1923":"New Zealand Exclusive Economic Zone","South Pacific Ocean-NZL-2460":"New Zealand Exclusive Economic Zone","South Pacific Ocean-TON-3081":"Tongan Exclusive Economic Zone","South Pacific Ocean-TUV-5882":"Tuvaluan Exclusive Economic Zone","Southern Ocean-SGS-634":"Overlapping claim South Georgia and the South Sandwich Islands: United Kingdom / Argentina"};
@@ -1194,8 +1207,19 @@ function showColorCtrl(id, delayMs = 4000) {
   _colorCtrlTimers[id] = setTimeout(() => { el.style.display = 'none'; }, delayMs);
 }
 
-let zonesVisible   = true;
-let vesselsVisible = true;
+let zonesVisible    = true;
+let rings10kVisible = false;
+let vesselsVisible  = true;
+
+function toggle10kmRings() {
+  rings10kVisible = !rings10kVisible;
+  for (const z of zoneData) {
+    if (rings10kVisible) { z.ring10k.addTo(map); if (z.ring10kW) z.ring10kW.addTo(map); }
+    else                 { z.ring10k.remove();   if (z.ring10kW) z.ring10kW.remove(); }
+  }
+  const btn = document.getElementById('rings10k-btn');
+  if (btn) btn.style.opacity = rings10kVisible ? '1' : '0.45';
+}
 
 function toggleZones() {
   zonesVisible = !zonesVisible;
@@ -1283,10 +1307,13 @@ for (const [lon, lat, name, depth, geomorph, ocean, eez, mapped, observed, point
     color: color, weight, opacity: 0.9, fillColor: color, fillOpacity,
   };
   const circle = L.circle([lat, lon], circleOpts).addTo(map);
-  // Western copy: for eastern-hemisphere zones (lon > 0) render a duplicate at lon-360
-  // so they appear seamlessly in a Pacific-centred view without cutting the ocean in half.
   const circleW = lon > 0 ? L.circle([lat, lon - 360], circleOpts).addTo(map) : null;
-  zoneData.push({ lon, lat, name, depth, geomorph, ocean, eez, mapped, observed, pointDepth, shoreM, seafloor, circle, circleW, defaultColor: color, defaultFillOpacity: fillOpacity });
+
+  const ring10kOpts = { radius: 10000, renderer: canvas10kRenderer, color, weight: 0.8, opacity: 0.35, fillOpacity: 0, dashArray: '4 6', interactive: false };
+  const ring10k  = L.circle([lat, lon], ring10kOpts);
+  const ring10kW = lon > 0 ? L.circle([lat, lon - 360], ring10kOpts) : null;
+
+  zoneData.push({ lon, lat, name, depth, geomorph, ocean, eez, mapped, observed, pointDepth, shoreM, seafloor, circle, circleW, ring10k, ring10kW, defaultColor: color, defaultFillOpacity: fillOpacity });
 }
 
 // Fast zone lookup by name for jump links
