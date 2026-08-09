@@ -1309,7 +1309,7 @@ for (const [lon, lat, name, depth, geomorph, ocean, eez, mapped, observed, point
   const circle = L.circle([lat, lon], circleOpts).addTo(map);
   const circleW = lon > 0 ? L.circle([lat, lon - 360], circleOpts).addTo(map) : null;
 
-  const ring10kOpts = { radius: 10000, renderer: canvas10kRenderer, color, weight: 0.8, opacity: 0.35, fillOpacity: 0, dashArray: '4 6', interactive: false };
+  const ring10kOpts = { radius: 10000, renderer: canvas10kRenderer, color, weight: 1.5, opacity: 0.65, fillOpacity: 0, dashArray: '6 4', interactive: false };
   const ring10k  = L.circle([lat, lon], ring10kOpts);
   const ring10kW = lon > 0 ? L.circle([lat, lon - 360], ring10kOpts) : null;
 
