@@ -5521,7 +5521,8 @@ function parseCSV(text) {
   // Auto-detect delimiter
   const delim = lines[0].includes('	') ? '	' : lines[0].includes(';') ? ';' : ',';
 
-  const rawHeaders = lines[0].split(delim).map(h => h.trim().replace(/^"|"$/g,'').toLowerCase());
+  const rawHeaders     = lines[0].split(delim).map(h => h.trim().replace(/^"|"$/g,'').toLowerCase());
+  const displayHeaders = lines[0].split(delim).map(h => h.trim().replace(/^"|"$/g,''));
 
   // Map header names to indices
   const LAT_ALIASES  = ['lat','latitude','y','ylat','lat_dd','latitude_dd','decimal_lat','dec_lat'];
@@ -5564,7 +5565,13 @@ function parseCSV(text) {
     if (isNaN(lat) || isNaN(lon)) continue;
     const label = lblIdx  >= 0 ? (cols[lblIdx]  || `Row ${r}`) : `Row ${r}`;
     const date  = dateIdx >= 0 ? (cols[dateIdx] || null)        : null;
-    points.push({ lat, lon, label, date, row: r });
+    // Collect all extra columns (exclude lat/lon)
+    const extra = {};
+    for (let i = 0; i < cols.length; i++) {
+      if (i === latIdx || i === lonIdx) continue;
+      if (cols[i]) extra[displayHeaders[i]] = cols[i];
+    }
+    points.push({ lat, lon, label, date, extra, row: r });
   }
   if (!points.length) throw new Error('No valid lat/lon rows found.');
   return points;
@@ -5609,9 +5616,14 @@ function verifyPoints(points) {
         radius, color: '#fff', weight: 1.5, fillColor: color, fillOpacity: 0.9
       }).addTo(map);
       const typeLabel = isHit ? '✅ Zone intersection' : isNear ? `◎ Near miss — ${ptBest?.gapM} m from boundary` : '— No zone nearby';
-      const dateStr = pt.date ? `<br><span style="font-size:10px;color:#41B9C3">${pt.date}</span>` : '';
-      m.bindTooltip(`<b>${label}</b>${dateStr}<br><span style="font-size:10px;color:#8899bb">${lat.toFixed(5)}, ${lon.toFixed(5)}</span><br>${typeLabel}`,
-        { direction:'top', offset:[0,-6] });
+      const extraRows = pt.extra ? Object.entries(pt.extra).map(([k,v]) =>
+        `<div style="font-size:10px;color:#8899bb"><span style="color:#41B9C3;font-weight:600">${k}:</span> ${v}</div>`).join('') : '';
+      m.bindTooltip(
+        `<b style="font-size:11px">${label}</b>` +
+        `<div style="font-size:10px;color:#8899bb;margin:2px 0">${lat.toFixed(5)}, ${lon.toFixed(5)}</div>` +
+        extraRows +
+        `<div style="margin-top:4px;font-size:10px">${typeLabel}</div>`,
+        { direction:'top', offset:[0,-6], maxWidth: 260 });
       m.on('click', e => { L.DomEvent.stopPropagation(e); map.setView([lat, lon], 11); if (isHit) jumpToZone(hits.find(h => h.point===pt)?.zone?.name); else if (isNear) jumpToZone(ptBest.zone.name); });
       verifyMarkers.push(m);
     }
@@ -5697,8 +5709,11 @@ function verifyPoints(points) {
       const dot    = isHit ? '<span style="color:#e040fb">●</span> ' : isNear ? '<span style="color:#ffd54f">◎</span> ' : '<span style="color:#8899bb">·</span> ';
       const row = document.createElement('div');
       row.className = 'verify-result-row';
+      const extraDetail = pt.extra ? Object.entries(pt.extra)
+        .filter(([k]) => k.toLowerCase() !== pt.label?.toLowerCase())
+        .map(([k,v]) => `${k}: ${v}`).join(' &nbsp;·&nbsp; ') : '';
       row.innerHTML = `<div class="vr-name">${dot}${pt.label}</div>
-        <div class="vr-detail">${pt.date ? `${pt.date} &nbsp;·&nbsp; ` : ''}${pt.lat.toFixed(5)}, ${pt.lon.toFixed(5)}</div>`;
+        <div class="vr-detail">${pt.lat.toFixed(5)}, ${pt.lon.toFixed(5)}${extraDetail ? ' &nbsp;·&nbsp; ' + extraDetail : ''}</div>`;
       row.onclick = () => map.setView([pt.lat, pt.lon], 11);
       listEl.appendChild(row);
     }
