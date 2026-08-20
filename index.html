@@ -5884,8 +5884,27 @@ function verifyKML({ points, tracks }) {
     zss(z, { weight: 2.5, color: '#ffd54f', fillOpacity: 0.5 });
   }
 
-  // Also run point placemarks through the standard verifier (waypoints)
-  if (points.length) verifyPoints(points);
+  // Point placemarks (waypoints) — add markers inline without calling clearVerification
+  for (const pt of points) {
+    const { lat, lon, label } = pt;
+    let ptHit = false, ptBest = null;
+    for (const z of nearbyZones(lat, lon)) {
+      const d = haversineM(lat, lon, z.lat, z.lon);
+      if (d <= 5000) {
+        hitZoneSet.add(z);
+        ptHit = true;
+        const prev = zoneHitData.get(z);
+        if (!prev || d < prev.dist) zoneHitData.set(z, { point: pt, dist: Math.round(d) });
+      } else if (d <= NEAR_MISS_M && !hitZoneSet.has(z)) {
+        const gapM = Math.round(d - 5000);
+        if (!ptBest || gapM < ptBest.gapM) ptBest = { zone: z, gapM };
+      }
+    }
+    const color = ptHit ? '#e040fb' : ptBest ? '#ffd54f' : '#8899bb';
+    const m = L.circleMarker([lat, lon], { radius: 5, color: '#fff', weight: 1.5, fillColor: color, fillOpacity: 0.9 }).addTo(map);
+    m.bindTooltip(`<b style="font-size:11px">${label}</b><div style="font-size:10px;color:#8899bb">${lat.toFixed(5)}, ${lon.toFixed(5)}</div>`, { direction:'top', offset:[0,-6] });
+    verifyMarkers.push(m);
+  }
 
   // Fit map to tracks
   if (tracks.length) {
