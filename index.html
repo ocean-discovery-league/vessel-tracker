@@ -5722,19 +5722,19 @@ function verifyPoints(points) {
   document.getElementById('verify-results').style.display = '';
 }
 
+// Returns { points: [...], tracks: [{ name, coords: [{lat,lon}] }] }
 function parseKML(text) {
   const parser = new DOMParser();
   const doc = parser.parseFromString(text, 'application/xml');
   const points = [];
+  const tracks = [];
 
-  // Helper: parse a "lon,lat[,alt]" coordinate string
   function parseCoordStr(str) {
     const parts = str.trim().split(',');
     const lon = parseFloat(parts[0]);
     const lat = parseFloat(parts[1]);
-    const alt = parts[2] != null ? parseFloat(parts[2]) : null;
     if (isNaN(lat) || isNaN(lon)) return null;
-    return { lat, lon, alt: (alt != null && !isNaN(alt)) ? alt : null };
+    return { lat, lon };
   }
 
   const placemarks = [...doc.querySelectorAll('Placemark')];
@@ -5742,7 +5742,7 @@ function parseKML(text) {
     const nameEl = pm.querySelector('name');
     const pmName = nameEl ? nameEl.textContent.trim() : '';
 
-    // --- Point placemarks ---
+    // Point placemarks → individual verify points
     const ptCoordEl = pm.querySelector('Point coordinates');
     if (ptCoordEl) {
       const c = parseCoordStr(ptCoordEl.textContent);
@@ -5750,49 +5750,40 @@ function parseKML(text) {
         const depthEl = [...pm.querySelectorAll('SimpleData')].find(el => el.getAttribute('name') === 'Depth');
         const depth = depthEl ? Math.round(parseFloat(depthEl.textContent)) : null;
         const label = pmName || `${c.lat.toFixed(4)}, ${c.lon.toFixed(4)}`;
-        points.push({ lat: c.lat, lon: c.lon, label: depth != null ? `${label} (${depth} m)` : label });
+        points.push({ lat: c.lat, lon: c.lon, label: depth != null ? `${label} (${depth} m)` : label, extra: {} });
       }
       continue;
     }
 
-    // --- LineString / MultiGeometry track placemarks ---
+    // LineString / MultiGeometry → track segments
     const lineCoordEls = [...pm.querySelectorAll('LineString coordinates, LinearRing coordinates')];
     for (const el of lineCoordEls) {
-      const rawCoords = el.textContent.trim().split(/\s+/);
-      rawCoords.forEach((raw, i) => {
-        const c = parseCoordStr(raw);
-        if (!c) return;
-        const label = pmName ? `${pmName} pt${i+1}` : `Track pt${i+1}`;
-        points.push({ lat: c.lat, lon: c.lon, label, extra: c.alt != null ? { Altitude_m: c.alt.toFixed(1) } : {} });
-      });
+      const coords = el.textContent.trim().split(/\s+/).map(parseCoordStr).filter(Boolean);
+      if (coords.length) tracks.push({ name: pmName || 'Track', coords });
     }
 
-    // --- gx:Track (Google Earth time-stamped tracks) ---
-    const gxCoordEls = [...pm.querySelectorAll('coord')]; // gx:coord
-    gxCoordEls.forEach((el, i) => {
-      const parts = el.textContent.trim().split(/\s+/);
-      const lon = parseFloat(parts[0]);
-      const lat = parseFloat(parts[1]);
-      const alt = parts[2] != null ? parseFloat(parts[2]) : null;
-      if (isNaN(lat) || isNaN(lon)) return;
-      const label = pmName ? `${pmName} pt${i+1}` : `Track pt${i+1}`;
-      points.push({ lat, lon, label, extra: (alt != null && !isNaN(alt)) ? { Altitude_m: alt.toFixed(1) } : {} });
-    });
-  }
-
-  // Also catch any top-level LineString/Track outside Placemarks (rare but valid)
-  if (!points.length) {
-    const topCoordEls = [...doc.querySelectorAll('LineString coordinates')];
-    for (const el of topCoordEls) {
-      el.textContent.trim().split(/\s+/).forEach((raw, i) => {
-        const c = parseCoordStr(raw);
-        if (c) points.push({ lat: c.lat, lon: c.lon, label: `Track pt${i+1}`, extra: {} });
-      });
+    // gx:Track (Google Earth time-stamped)
+    const gxCoords = [...pm.querySelectorAll('coord')];
+    if (gxCoords.length) {
+      const coords = gxCoords.map(el => {
+        const parts = el.textContent.trim().split(/\s+/);
+        const lon = parseFloat(parts[0]), lat = parseFloat(parts[1]);
+        return isNaN(lat) || isNaN(lon) ? null : { lat, lon };
+      }).filter(Boolean);
+      if (coords.length) tracks.push({ name: pmName || 'Track', coords });
     }
   }
 
-  if (!points.length) throw new Error('No Point or LineString/Track coordinates found in KML');
-  return points;
+  // Top-level LineStrings outside Placemarks
+  if (!tracks.length && !points.length) {
+    for (const el of doc.querySelectorAll('LineString coordinates')) {
+      const coords = el.textContent.trim().split(/\s+/).map(parseCoordStr).filter(Boolean);
+      if (coords.length) tracks.push({ name: 'Track', coords });
+    }
+  }
+
+  if (!points.length && !tracks.length) throw new Error('No Point or LineString/Track coordinates found in KML');
+  return { points, tracks };
 }
 
 async function runFileVerification(event) {
@@ -5804,14 +5795,149 @@ async function runFileVerification(event) {
   try {
     const text = await file.text();
     const isKML = file.name.toLowerCase().endsWith('.kml');
-    const points = isKML ? parseKML(text) : parseCSV(text);
-    statusEl.textContent = `${points.length} points loaded from "${file.name}"`;
-    statusEl.style.color = '#81e1e7';
-    verifyPoints(points);
+    if (isKML) {
+      const { points, tracks } = parseKML(text);
+      const totalCoords = tracks.reduce((s, t) => s + t.coords.length, 0);
+      const ptCount = points.length;
+      const parts = [];
+      if (tracks.length) parts.push(`${tracks.length} track${tracks.length>1?'s':''} (${totalCoords.toLocaleString()} pts)`);
+      if (ptCount) parts.push(`${ptCount} waypoint${ptCount>1?'s':''}`);
+      statusEl.textContent = `KML loaded: ${parts.join(', ')} from "${file.name}"`;
+      statusEl.style.color = '#81e1e7';
+      verifyKML({ points, tracks });
+    } else {
+      const points = parseCSV(text);
+      statusEl.textContent = `${points.length} points loaded from "${file.name}"`;
+      statusEl.style.color = '#81e1e7';
+      verifyPoints(points);
+    }
   } catch(err) {
     statusEl.textContent = 'Error: ' + err.message;
     statusEl.style.color = '#ff6666';
   }
+}
+
+function verifyKML({ points, tracks }) {
+  clearVerification();
+  const hitZoneSet  = new Set();
+  const nearZoneSet = new Set();
+  // Per-zone: closest approach point and distance
+  const zoneHitData  = new Map(); // zone → { point, dist }
+  const zoneNearData = new Map(); // zone → { point, gapM }
+
+  // Check all track coordinates
+  for (const track of tracks) {
+    for (const pt of track.coords) {
+      const { lat, lon } = pt;
+      for (const z of nearbyZones(lat, lon)) {
+        const d = haversineM(lat, lon, z.lat, z.lon);
+        if (d <= 5000) {
+          hitZoneSet.add(z);
+          const prev = zoneHitData.get(z);
+          if (!prev || d < prev.dist) zoneHitData.set(z, { point: pt, dist: Math.round(d) });
+        } else if (d <= NEAR_MISS_M && !hitZoneSet.has(z)) {
+          nearZoneSet.add(z);
+          const gapM = Math.round(d - 5000);
+          const prev = zoneNearData.get(z);
+          if (!prev || gapM < prev.gapM) zoneNearData.set(z, { point: pt, gapM, dist: Math.round(d) });
+        }
+      }
+    }
+  }
+  // Remove zones from near set that ended up being hits
+  for (const z of hitZoneSet) nearZoneSet.delete(z);
+
+  // Draw track polylines
+  for (const track of tracks) {
+    const latlngs = track.coords.map(c => [c.lat, pacificLon(c.lon)]);
+    const poly = L.polyline(latlngs, { color: '#41B9C3', weight: 2, opacity: 0.85 }).addTo(map);
+    verifyMarkers.push(poly);
+  }
+
+  // Place markers at closest approach to each hit zone
+  for (const [z, { point, dist }] of zoneHitData) {
+    const m = L.circleMarker([point.lat, point.lon], {
+      radius: 7, color: '#fff', weight: 2, fillColor: '#e040fb', fillOpacity: 0.9
+    }).addTo(map);
+    m.bindTooltip(
+      `<b style="font-size:11px">✅ Track enters ${z.name}</b>` +
+      `<div style="font-size:10px;color:#8899bb;margin:2px 0">${point.lat.toFixed(5)}, ${point.lon.toFixed(5)}</div>` +
+      `<div style="font-size:10px">${dist} m from zone center &nbsp;·&nbsp; ${z.geomorph}</div>`,
+      { direction:'top', offset:[0,-8], maxWidth: 280 });
+    m.on('click', e => { L.DomEvent.stopPropagation(e); jumpToZone(z.name); });
+    verifyMarkers.push(m);
+    verifyHitZones.push(z);
+    zss(z, { weight: 3, color: '#e040fb', fillOpacity: 0.65 });
+  }
+  for (const [z, { point, gapM }] of zoneNearData) {
+    const m = L.circleMarker([point.lat, point.lon], {
+      radius: 6, color: '#fff', weight: 2, fillColor: '#ffd54f', fillOpacity: 0.9
+    }).addTo(map);
+    m.bindTooltip(
+      `<b style="font-size:11px">◎ Near miss — ${z.name}</b>` +
+      `<div style="font-size:10px;color:#8899bb;margin:2px 0">${point.lat.toFixed(5)}, ${point.lon.toFixed(5)}</div>` +
+      `<div style="font-size:10px">${gapM} m from zone boundary &nbsp;·&nbsp; ${z.geomorph}</div>`,
+      { direction:'top', offset:[0,-8], maxWidth: 280 });
+    m.on('click', e => { L.DomEvent.stopPropagation(e); jumpToZone(z.name); });
+    verifyMarkers.push(m);
+    verifyHitZones.push(z);
+    zss(z, { weight: 2.5, color: '#ffd54f', fillOpacity: 0.5 });
+  }
+
+  // Also run point placemarks through the standard verifier (waypoints)
+  if (points.length) verifyPoints(points);
+
+  // Fit map to tracks
+  if (tracks.length) {
+    const allPts = tracks.flatMap(t => t.coords).map(c => [c.lat, c.lon]);
+    map.fitBounds(L.latLngBounds(allPts), { padding: [40, 40], maxZoom: 10 });
+  }
+
+  // Summary
+  const totalCoords = tracks.reduce((s, t) => s + t.coords.length, 0);
+  document.getElementById('verify-summary').innerHTML =
+    `${totalCoords.toLocaleString()} track pts checked &nbsp;·&nbsp; ` +
+    `<span style="color:#e040fb">●</span> ${hitZoneSet.size} zone${hitZoneSet.size!==1?'s':''} intersected &nbsp;·&nbsp; ` +
+    `<span style="color:#ffd54f">◎</span> ${nearZoneSet.size} near miss${nearZoneSet.size!==1?'es':''}`;
+
+  const listEl = document.getElementById('verify-hit-list');
+  listEl.innerHTML = '';
+
+  if (hitZoneSet.size) {
+    const hdr = document.createElement('div');
+    hdr.style.cssText = 'font-size:10px;font-weight:700;color:#e040fb;margin:6px 0 4px;text-transform:uppercase;letter-spacing:0.8px;';
+    hdr.textContent = `● Track Intersections (${hitZoneSet.size})`;
+    listEl.appendChild(hdr);
+    for (const [z, { dist }] of zoneHitData) {
+      const row = document.createElement('div');
+      row.className = 'verify-result-row';
+      row.innerHTML = `<div class="vr-name">${z.name}</div>
+        <div class="vr-detail">${z.geomorph} &nbsp;·&nbsp; closest approach ${dist} m from center</div>`;
+      row.onclick = () => jumpToZone(z.name);
+      listEl.appendChild(row);
+    }
+  }
+
+  if (nearZoneSet.size) {
+    const hdr = document.createElement('div');
+    hdr.style.cssText = 'font-size:10px;font-weight:700;color:#ffd54f;margin:10px 0 4px;text-transform:uppercase;letter-spacing:0.8px;';
+    hdr.textContent = `◎ Near Misses (${nearZoneSet.size})`;
+    listEl.appendChild(hdr);
+    for (const [z, { gapM }] of zoneNearData) {
+      const row = document.createElement('div');
+      row.className = 'verify-result-row';
+      row.innerHTML = `<div class="vr-name">${z.name}</div>
+        <div class="vr-detail">${z.geomorph} &nbsp;·&nbsp; closest approach ${gapM} m from boundary</div>`;
+      row.onclick = () => jumpToZone(z.name);
+      listEl.appendChild(row);
+    }
+  }
+
+  if (!hitZoneSet.size && !nearZoneSet.size && !points.length) {
+    listEl.innerHTML = '<div style="font-size:10px;color:#8899bb;padding:4px 0;">No intersections or near-misses found along this track.</div>';
+  }
+
+  document.getElementById('verify-results').style.display = '';
 }
 
 let _recentPoints = JSON.parse(localStorage.getItem('recentCheckedPoints') || '[]');
