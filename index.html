@@ -475,7 +475,7 @@
       <!-- Results (shared) -->
       <div id="verify-results" style="display:none;margin-top:10px;border-top:1px solid #187D8B;padding-top:10px;">
         <div style="font-size:10px;font-weight:700;color:#81e1e7;margin-bottom:6px;" id="verify-summary"></div>
-        <div id="verify-hit-list"   style="max-height:200px;overflow-y:auto;"></div>
+        <div id="verify-hit-list"   style="max-height:360px;overflow-y:auto;"></div>
       </div>
     </div>
   </div>
@@ -5524,16 +5524,18 @@ function parseCSV(text) {
   const rawHeaders = lines[0].split(delim).map(h => h.trim().replace(/^"|"$/g,'').toLowerCase());
 
   // Map header names to indices
-  const LAT_ALIASES = ['lat','latitude','y','ylat','lat_dd','latitude_dd','decimal_lat','dec_lat'];
-  const LON_ALIASES = ['lon','lng','long','longitude','x','xlong','lon_dd','longitude_dd','decimal_lon','dec_lon','decimal_long'];
-  const LBL_ALIASES = ['name','label','dive','dive_name','site','site_name','id','station','waypoint','description'];
+  const LAT_ALIASES  = ['lat','latitude','y','ylat','lat_dd','latitude_dd','decimal_lat','dec_lat'];
+  const LON_ALIASES  = ['lon','lng','long','longitude','x','xlong','lon_dd','longitude_dd','decimal_lon','dec_lon','decimal_long'];
+  const LBL_ALIASES  = ['name','label','dive','dive_name','site','site_name','id','station','waypoint','description'];
+  const DATE_ALIASES = ['date','datetime','timestamp','time','date_time','start_date','dive_date','utc_date','date_utc'];
 
-  let latIdx = -1, lonIdx = -1, lblIdx = -1;
+  let latIdx = -1, lonIdx = -1, lblIdx = -1, dateIdx = -1;
   for (let i = 0; i < rawHeaders.length; i++) {
     const h = rawHeaders[i];
-    if (latIdx < 0 && LAT_ALIASES.includes(h)) latIdx = i;
-    if (lonIdx < 0 && LON_ALIASES.includes(h)) lonIdx = i;
-    if (lblIdx < 0 && LBL_ALIASES.includes(h)) lblIdx = i;
+    if (latIdx  < 0 && LAT_ALIASES.includes(h))  latIdx  = i;
+    if (lonIdx  < 0 && LON_ALIASES.includes(h))  lonIdx  = i;
+    if (lblIdx  < 0 && LBL_ALIASES.includes(h))  lblIdx  = i;
+    if (dateIdx < 0 && DATE_ALIASES.includes(h)) dateIdx = i;
   }
 
   // If no header match, try numeric detection (first two numeric columns)
@@ -5560,8 +5562,9 @@ function parseCSV(text) {
     const cols = lines[r].split(delim).map(v => v.trim().replace(/^"|"$/g,''));
     const lat = parseFloat(cols[latIdx]), lon = parseFloat(cols[lonIdx]);
     if (isNaN(lat) || isNaN(lon)) continue;
-    const label = lblIdx >= 0 ? (cols[lblIdx] || `Row ${r}`) : `Row ${r}`;
-    points.push({ lat, lon, label, row: r });
+    const label = lblIdx  >= 0 ? (cols[lblIdx]  || `Row ${r}`) : `Row ${r}`;
+    const date  = dateIdx >= 0 ? (cols[dateIdx] || null)        : null;
+    points.push({ lat, lon, label, date, row: r });
   }
   if (!points.length) throw new Error('No valid lat/lon rows found.');
   return points;
@@ -5570,7 +5573,9 @@ function parseCSV(text) {
 // Run zone check for an array of {lat, lon, label} points
 function verifyPoints(points) {
   clearVerification();
-  const showAll = document.getElementById('verify-show-all').checked;
+  // Always show all points for CSV uploads
+  document.getElementById('verify-show-all').checked = true;
+  const showAll = true;
 
   const hits      = [];  // { point, zone, type:'hit' }
   const nearMisses= [];  // { point, zone, gapM, type:'near' }
@@ -5604,9 +5609,10 @@ function verifyPoints(points) {
         radius, color: '#fff', weight: 1.5, fillColor: color, fillOpacity: 0.9
       }).addTo(map);
       const typeLabel = isHit ? '✅ Zone intersection' : isNear ? `◎ Near miss — ${ptBest?.gapM} m from boundary` : '— No zone nearby';
-      m.bindTooltip(`<b>${label}</b><br><span style="font-size:10px;color:#555">${lat.toFixed(4)}, ${lon.toFixed(4)}</span><br>${typeLabel}`,
+      const dateStr = pt.date ? `<br><span style="font-size:10px;color:#41B9C3">${pt.date}</span>` : '';
+      m.bindTooltip(`<b>${label}</b>${dateStr}<br><span style="font-size:10px;color:#8899bb">${lat.toFixed(5)}, ${lon.toFixed(5)}</span><br>${typeLabel}`,
         { direction:'top', offset:[0,-6] });
-      m.on('click', e => { L.DomEvent.stopPropagation(e); if (isHit) jumpToZone(hits.find(h => h.point===pt)?.zone?.name); else if (isNear) jumpToZone(ptBest.zone.name); });
+      m.on('click', e => { L.DomEvent.stopPropagation(e); map.setView([lat, lon], 11); if (isHit) jumpToZone(hits.find(h => h.point===pt)?.zone?.name); else if (isNear) jumpToZone(ptBest.zone.name); });
       verifyMarkers.push(m);
     }
   }
@@ -5677,6 +5683,25 @@ function verifyPoints(points) {
 
   if (!hits.length && !nearMisses.length) {
     listEl.innerHTML = '<div style="font-size:10px;color:#8899bb;padding:4px 0;">No intersections or near-misses found.</div>';
+  }
+
+  // All Dives list — every point clickable with date + location
+  if (points.length) {
+    const hdr = document.createElement('div');
+    hdr.style.cssText = 'font-size:10px;font-weight:700;color:#81e1e7;margin:12px 0 4px;text-transform:uppercase;letter-spacing:0.8px;border-top:1px solid #187D8B;padding-top:10px;';
+    hdr.textContent = `All Dives (${points.length})`;
+    listEl.appendChild(hdr);
+    for (const pt of points) {
+      const isHit  = hits.some(h => h.point === pt);
+      const isNear = nearMisses.some(n => n.point === pt);
+      const dot    = isHit ? '<span style="color:#e040fb">●</span> ' : isNear ? '<span style="color:#ffd54f">◎</span> ' : '<span style="color:#8899bb">·</span> ';
+      const row = document.createElement('div');
+      row.className = 'verify-result-row';
+      row.innerHTML = `<div class="vr-name">${dot}${pt.label}</div>
+        <div class="vr-detail">${pt.date ? `${pt.date} &nbsp;·&nbsp; ` : ''}${pt.lat.toFixed(5)}, ${pt.lon.toFixed(5)}</div>`;
+      row.onclick = () => map.setView([pt.lat, pt.lon], 11);
+      listEl.appendChild(row);
+    }
   }
 
   document.getElementById('verify-results').style.display = '';
