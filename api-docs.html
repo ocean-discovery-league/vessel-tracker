@@ -1,30 +1,30 @@
 <title>Deep Sea Exploration Goals API</title>
 <meta name="claude:viewport-fit-sides" content="cover">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@600;700;800&family=Inter:wght@400;500&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap">
 
 <style>
   /* Layout: single-column doc page with sticky nav, wide code blocks, two-col integration cards */
 
   /* ODL brand: #187D8B teal, #0C3E46 dark teal, Montserrat headings */
   :root {
-    --bg:          #f5f7f8;
-    --bg-subtle:   #ebf2f3;
-    --surface:     #ffffff;
-    --border:      #ccdde0;
-    --fg:          #0a1f24;
-    --fg-muted:    #3d6068;
-    --fg-xmuted:   #6a9099;
+    --bg:          #0E2446;
+    --bg-subtle:   #122d56;
+    --surface:     #162e52;
+    --border:      #1e3d6a;
+    --fg:          #ffffff;
+    --fg-muted:    #ffffff;
+    --fg-xmuted:   #ccddee;
     --accent:      #187D8B;
     --accent-pale: #e0f2f4;
     --accent-mid:  #1d9aab;
-    --code-bg:     #0a1f24;
+    --code-bg:     #071428;
     --code-fg:     #c8e8ec;
     --code-accent: #3fc6d4;
     --code-green:  #7dd98c;
     --code-yellow: #f0c060;
-    --stat-bg:     #0C3E46;
+    --stat-bg:     #071428;
     --stat-fg:     #ffffff;
-    color-scheme: light;
+    color-scheme: dark;
   }
 
   @media (prefers-color-scheme: dark) {
@@ -77,7 +77,7 @@
     margin: 0;
     background: var(--bg);
     color: var(--fg);
-    font-family: 'Inter', system-ui, sans-serif;
+    font-family: 'Montserrat', system-ui, sans-serif;
     font-size: 15px;
     line-height: 1.65;
     padding-left: max(16px, env(safe-area-inset-left, 0px));
@@ -183,7 +183,7 @@
 
   .hero-sub {
     font-size: 17px;
-    color: #7aa0be;
+    color: #ffffff;
     max-width: 580px;
     margin: 0 0 36px;
     line-height: 1.6;
@@ -623,9 +623,8 @@
 
 <section class="hero">
   <div class="hero-inner">
-    <div class="hero-eyebrow">Web Data Service &nbsp;·&nbsp; GeoJSON &nbsp;·&nbsp; Free &amp; Open</div>
-    <h1>Add the global ocean<br>exploration goal layer<br>to your planning tool</h1>
-    <p class="hero-sub">10,000 candidate zones covering the unexplored deep seafloor — structured as a REST API you can query from any GIS application, ship planning system, or custom web map.</p>
+    <h1>Add the Global Deep Sea Exploration Goals to Your Planning Tool</h1>
+    <p class="hero-sub">The 10,000 Global Deep Sea Exploration Goals and their 5 km exploration zones structured as a REST API you can query from any GIS application, ship planning system, or custom web map.</p>
     <div class="hero-endpoint">
       <span>https://global-goal-tracker-internal.vercel.app/api/zones</span>
       <button class="copy-btn" onclick="copyText('https://global-goal-tracker-internal.vercel.app/api/zones', this)">COPY</button>
@@ -633,26 +632,6 @@
   </div>
 </section>
 
-<div class="stats-band">
-  <div class="stats-inner">
-    <div class="stat">
-      <div class="stat-num">10,000</div>
-      <div class="stat-label">Candidate zones</div>
-    </div>
-    <div class="stat">
-      <div class="stat-num">73.5%</div>
-      <div class="stat-label">Not yet mapped</div>
-    </div>
-    <div class="stat">
-      <div class="stat-num">5 km</div>
-      <div class="stat-label">Zone radius</div>
-    </div>
-    <div class="stat">
-      <div class="stat-num">9</div>
-      <div class="stat-label">Ocean basins</div>
-    </div>
-  </div>
-</div>
 
 <main class="main">
 
@@ -881,20 +860,7 @@ gdf.plot()</pre>
 
   <section class="section" id="cite">
     <h2>Cite this dataset</h2>
-    <p>If you use these zones in a cruise proposal, publication, or planning document, please cite the dataset so the methodology is traceable.</p>
-
-    <div class="citation-block">
-      <pre class="citation-text">Global Deep Sea Exploration Goal Zones (v1.0). Ocean Exploration Trust / [Institution].
-Available at: https://global-goal-tracker-internal.vercel.app/api/zones
-DOI: [pending registration via Zenodo]
-Dataset of 10,000 candidate deep-sea exploration zones at 5 km radius,
-gridded globally across all ocean basins below 200 m depth.</pre>
-    </div>
-
-    <p style="margin-top:16px;font-size:13px">A citable methods note describing zone selection criteria is in preparation. Contact <strong style="color:var(--fg)">explorationgoals@oceandiscoveryleague.org</strong> if you would like to be notified when it is published, or to discuss collaboration.</p>
-
-    <h3 style="margin-top:28px">License</h3>
-    <p style="font-size:13px">The zone dataset is released under <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener" style="color:var(--accent)">CC BY 4.0</a>. You may use it in any context — including commercial tools — with attribution.</p>
+    <p>TBD</p>
   </section>
 
 </main>
@@ -902,7 +868,7 @@ gridded globally across all ocean basins below 200 m depth.</pre>
 <footer class="site-footer">
   <div class="footer-inner">
     <span class="footer-note">&copy; 2026 Ocean Discovery League, Inc. &nbsp;·&nbsp; <a href="https://www.oceandiscoveryleague.org/global-deep-sea-exploration-goals" target="_blank" rel="noopener">Global Deep Sea Exploration Goals</a></span>
-    <span class="footer-note">Questions? <a href="mailto:explorationgoals@oceandiscoveryleague.org">explorationgoals@oceandiscoveryleague.org</a></span>
+    <span class="footer-note">Questions? <a href="mailto:ahoy@oceandiscoveryleague.org">ahoy@oceandiscoveryleague.org</a></span>
   </div>
 </footer>
 
