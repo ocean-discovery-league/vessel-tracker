@@ -1,12 +1,13 @@
-import { readFileSync } from 'fs';
-import { join } from 'path';
+const GEOJSON_URL = 'https://github.com/ocean-discovery-league/vessel-tracker/releases/download/v1.0/V9.2.2_Buffer5k_20260602.geojson';
 
-// Parsed once per container lifetime — avoids re-reading 76 MB on every request
+// Fetched and parsed once per container lifetime
 let _features = null;
-function getFeatures() {
+async function getFeatures() {
   if (!_features) {
-    const raw = readFileSync(join(process.cwd(), 'V9.2.2_Buffer5k_20260602.geojson'), 'utf8');
-    _features = JSON.parse(raw).features;
+    const res = await fetch(GEOJSON_URL);
+    if (!res.ok) throw new Error(`Failed to fetch zone data: ${res.status}`);
+    const data = await res.json();
+    _features = data.features;
   }
   return _features;
 }
@@ -33,7 +34,7 @@ export default async function handler(req, res) {
       offset = '0',
     } = req.query;
 
-    let features = getFeatures();
+    let features = await getFeatures();
 
     // ── Filters ──────────────────────────────────────────────────────────────
     if (ocean) {
