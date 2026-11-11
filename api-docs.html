@@ -626,8 +626,8 @@
     <h1>Add the Global Deep Sea Exploration Goals to Your Planning Tool</h1>
     <p class="hero-sub">The 10,000 Global Deep Sea Exploration Goals and their 5 km exploration zones structured as a REST API you can query from any GIS application, ship planning system, or custom web map.</p>
     <div class="hero-endpoint">
-      <span>https://global-goal-tracker-internal.vercel.app/api/zones</span>
-      <button class="copy-btn" onclick="copyText('https://global-goal-tracker-internal.vercel.app/api/zones', this)">COPY</button>
+      <span>https://odl-exploration-goals-api.vercel.app/api/zones</span>
+      <button class="copy-btn" onclick="copyText('https://odl-exploration-goals-api.vercel.app/api/zones', this)">COPY</button>
     </div>
   </div>
 </section>
@@ -765,7 +765,7 @@
         <ol class="steps">
           <li>Open <strong>Layer → Add Layer → Add Vector Layer</strong></li>
           <li>Set Source Type to <strong>Protocol: HTTP(S)</strong></li>
-          <li>Paste the endpoint URL into the URI field:<br><code>https://global-goal-tracker-internal.vercel.app/api/zones</code></li>
+          <li>Paste the endpoint URL into the URI field:<br><code>https://odl-exploration-goals-api.vercel.app/api/zones</code></li>
           <li>Click <strong>Add</strong>. The layer loads as 10,000 point features you can filter, style, and query.</li>
         </ol>
         <p style="font-size:12px;color:var(--fg-xmuted);margin:12px 0 0">To load only unmapped seamounts: append <code>?mapped=false&geomorph=Seamount</code> to the URL before adding.</p>
@@ -806,7 +806,7 @@
             <button class="copy-btn" onclick="copyBlock(this)">COPY</button>
           </div>
           <pre style="font-size:12px;padding:14px"><span class="cmt">// Leaflet</span>
-<span class="kw">fetch</span>(<span class="str">'https://global-goal-tracker-internal.vercel.app/api/zones'</span>)
+<span class="kw">fetch</span>(<span class="str">'https://odl-exploration-goals-api.vercel.app/api/zones'</span>)
   .then(r => r.json())
   .then(data => L.geoJSON(data).addTo(map));</pre>
         </div>
@@ -817,7 +817,7 @@
           </div>
           <pre style="font-size:12px;padding:14px">map.addSource(<span class="str">'goals'</span>, {
   type: <span class="str">'geojson'</span>,
-  data: <span class="str">'https://global-goal-tracker-internal.vercel.app/api/zones'</span>
+  data: <span class="str">'https://odl-exploration-goals-api.vercel.app/api/zones'</span>
 });</pre>
         </div>
       </div>
@@ -847,7 +847,7 @@ curl <span class="str">"https://goals.deepseaexploration.org\
             <button class="copy-btn" onclick="copyBlock(this)">COPY</button>
           </div>
           <pre style="font-size:12px;padding:14px"><span class="kw">import</span> geopandas <span class="kw">as</span> gpd
-url = <span class="str">"https://global-goal-tracker-internal.vercel.app/api/zones"</span>
+url = <span class="str">"https://odl-exploration-goals-api.vercel.app/api/zones"</span>
 gdf = gpd.read_file(url)
 gdf.plot()</pre>
         </div>
